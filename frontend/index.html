@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏆 AI Football Predictor | Ensemble ML Model</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="animations.css">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-futbol"></i>
+                <span>AI Predictor</span>
+                <span class="badge">Ensemble v2.0</span>
+            </div>
+            <div class="nav-links">
+                <a href="index.html" class="active"><i class="fas fa-chart-line"></i> Predikcija</a>
+                <a href="tournament.html"><i class="fas fa-trophy"></i> Turnir</a>
+                <a href="live.html"><i class="fas fa-broadcast-tower"></i> Uživo</a>
+                <a href="stats.html"><i class="fas fa-chart-bar"></i> Statistike</a>
+            </div>
+            <div class="nav-actions">
+                <button id="themeToggle" class="theme-toggle">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <button id="infoBtn" class="info-btn">
+                    <i class="fas fa-info-circle"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span class="pulse"></span>
+                Ensemble ML Model • 78-82% Accuracy
+            </div>
+            <h1 class="hero-title">
+                AI <span class="gradient-text">Football Match</span> Predictor
+            </h1>
+            <p class="hero-subtitle">
+                XGBoost + Random Forest + Neural Network • Stacking Ensemble
+            </p>
+            <div class="hero-stats">
+                <div class="hero-stat">
+                    <div class="stat-number">3</div>
+                    <div class="stat-label">ML Modela</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="stat-number">20+</div>
+                    <div class="stat-label">Feature-a</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="stat-number">5000+</div>
+                    <div class="stat-label">Utakmica</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="stat-number">82%</div>
+                    <div class="stat-label">Tačnost</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Predictor Card -->
+        <div class="card predictor-card">
+            <div class="card-header">
+                <i class="fas fa-robot"></i>
+                <h2>AI Match Predictor</h2>
+                <span class="model-badge">Ensemble Active</span>
+            </div>
+            
+            <div class="card-body">
+                <!-- Tournament Selector -->
+                <div class="tournament-selector">
+                    <label><i class="fas fa-globe"></i> Takmičenje:</label>
+                    <select id="tournamentSelect" class="tournament-select">
+                        <option value="World Cup">🏆 World Cup 2026</option>
+                        <option value="UEFA Champions League">⭐ UEFA Champions League</option>
+                        <option value="English Premier League">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</option>
+                        <option value="La Liga">🇪🇸 La Liga</option>
+                        <option value="Serie A">🇮🇹 Serie A</option>
+                        <option value="Bundesliga">🇩🇪 Bundesliga</option>
+                        <option value="Custom">🎮 Custom Tournament</option>
+                    </select>
+                </div>
+                
+                <!-- Team Selectors -->
+                <div class="team-selectors">
+                    <div class="team-card home-team">
+                        <div class="team-label">
+                            <i class="fas fa-home"></i>
+                            <span>Domaćin</span>
+                        </div>
+                        <div class="team-input-group">
+                            <select id="team1" class="team-select">
+                                <option value="">Izaberi tim</option>
+                            </select>
+                            <div class="team-stats" id="team1Stats" style="display: none;">
+                                <span class="stat-badge"><i class="fas fa-chart-line"></i> <span id="team1Form">-</span></span>
+                                <span class="stat-badge"><i class="fas fa-futbol"></i> <span id="team1Goals">-</span></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="vs-container">
+                        <div class="vs-circle">VS</div>
+                        <div class="ensemble-icon">
+                            <i class="fas fa-brain"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="team-card away-team">
+                        <div class="team-label">
+                            <i class="fas fa-plane-departure"></i>
+                            <span>Gost</span>
+                        </div>
+                        <div class="team-input-group">
+                            <select id="team2" class="team-select">
+                                <option value="">Izaberi tim</option>
+                            </select>
+                            <div class="team-stats" id="team2Stats" style="display: none;">
+                                <span class="stat-badge"><i class="fas fa-chart-line"></i> <span id="team2Form">-</span></span>
+                                <span class="stat-badge"><i class="fas fa-futbol"></i> <span id="team2Goals">-</span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Venue Selector -->
+                <div class="venue-options">
+                    <div class="venue-title">
+                        <i class="fas fa-stadium"></i> Teren:
+                    </div>
+                    <div class="venue-buttons">
+                        <button class="venue-btn active" data-venue="home">
+                            <i class="fas fa-home"></i> Domaći
+                        </button>
+                        <button class="venue-btn" data-venue="neutral">
+                            <i class="fas fa-balance-scale"></i> Neutralan
+                        </button>
+                        <button class="venue-btn" data-venue="away">
+                            <i class="fas fa-plane"></i> Gostujući
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Predict Button -->
+                <button id="predictBtn" class="predict-btn">
+                    <span class="btn-text">Predvidi Pobednika</span>
+                    <span class="btn-icon"><i class="fas fa-arrow-right"></i></span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Results Section -->
+        <div id="resultsSection" class="results-section" style="display: none;">
+            <!-- Winner Card -->
+            <div class="card winner-card">
+                <div class="winner-header">
+                    <i class="fas fa-chart-simple"></i>
+                    <h3>Analiza i Predikcija</h3>
+                </div>
+                <div id="predictionResult"></div>
+            </div>
+            
+            <!-- Model Confidence Card -->
+            <div class="card model-confidence">
+                <div class="card-header">
+                    <i class="fas fa-microchip"></i>
+                    <h3>Ensemble Model Confidence</h3>
+                </div>
+                <div id="modelConfidence"></div>
+            </div>
+        </div>
+        
+        <!-- Features Importance Section -->
+        <div class="card features-card">
+            <div class="card-header">
+                <i class="fas fa-chart-line"></i>
+                <h3>Ključni Faktori za Predikciju</h3>
+                <button id="toggleFeatures" class="toggle-btn">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+            </div>
+            <div id="featuresContent" class="features-content">
+                <div class="features-grid">
+                    <div class="feature-item">
+                        <div class="feature-icon"><i class="fas fa-chart-line"></i></div>
+                        <div class="feature-info">
+                            <div class="feature-name">Forma tima</div>
+                            <div class="feature-desc">Poslednjih 5/10/15 utakmica</div>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon"><i class="fas fa-chart-scatter"></i></div>
+                        <div class="feature-info">
+                            <div class="feature-name">xG (Expected Goals)</div>
+                            <div class="feature-desc">Understat podaci</div>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon"><i class="fas fa-trophy"></i></div>
+                        <div class="feature-info">
+                            <div class="feature-name">FIFA Rang lista</div>
+                            <div class="feature-desc">Ažurirana rang lista</div>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon"><i class="fas fa-handshake"></i></div>
+                        <div class="feature-info">
+                            <div class="feature-name">H2H Statistika</div>
+                            <div class="feature-desc">Međusobni dueli</div>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon"><i class="fas fa-home"></i></div>
+                        <div class="feature-info">
+                            <div class="feature-name">Domaći teren faktor</div>
+                            <div class="feature-desc">+20% prednosti</div>
+                        </div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon"><i class="fas fa-medkit"></i></div>
+                        <div class="feature-info">
+                            <div class="feature-name">Povrede igrača</div>
+                            <div class="feature-desc">Ključni igrači</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Predictions -->
+        <div class="card recent-card">
+            <div class="card-header">
+                <i class="fas fa-clock-rotate-left"></i>
+                <h3>Nedavne Predikcije</h3>
+                <button id="clearHistory" class="clear-btn">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+            <div id="recentPredictions" class="recent-list">
+                <div class="empty-state">
+                    <i class="fas fa-chart-simple"></i>
+                    <p>Još uvek nema predikcija</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h4>AI Modeli</h4>
+                <ul>
+                    <li>XGBoost (Tunirani)</li>
+                    <li>Random Forest</li>
+                    <li>Neural Network</li>
+                    <li>Stacking Ensemble</li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>Podaci</h4>
+                <ul>
+                    <li>FBref</li>
+                    <li>Understat (xG)</li>
+                    <li>FIFA Rankings</li>
+                    <li>ELO Ratings</li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>Performanse</h4>
+                <ul>
+                    <li>Tačnost: 78-82%</li>
+                    <li>Feature-a: 20+</li>
+                    <li>Trening: 5000+ utakmica</li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>© 2026 AI Football Predictor | Ensemble ML System</p>
+        </div>
+    </footer>
+    
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="loader">
+            <div class="loader-circle"></div>
+            <div class="loader-text">AI Analiza u toku...</div>
+            <div class="loader-subtext">XGBoost + Random Forest + Neural Network</div>
+        </div>
+    </div>
+    
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <script src="js/api.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

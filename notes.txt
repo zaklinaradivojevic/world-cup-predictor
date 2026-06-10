@@ -1,0 +1,43 @@
+world-cup-predictor/
+│
+├── backend/
+│   ├── __init__.py
+│   ├── scrapers/
+│   │   ├── __init__.py
+│   │   ├── fbref_scraper.py      # FBref scraping
+│   │   ├── understat_scraper.py  # Understat (xG podaci)
+│   │   ├── fifa_scraper.py       # FIFA rang liste
+│   │   └── weather_scraper.py    # Vremenski uslovi
+│   ├── features/
+│   │   ├── __init__.py
+│   │   ├── base_features.py      # Osnovni feature-i
+│   │   ├── advanced_features.py  # Napredni feature-i
+│   │   └── feature_engineering.py # Kompletan pipeline
+│   ├── models/
+│   │   ├── __init__.py
+│   │   ├── xgboost_model.py      # XGBoost sa tuniranjem
+│   │   ├── random_forest_model.py # Random Forest
+│   │   ├── neural_network.py     # TensorFlow/Keras NN
+│   │   └── ensemble_model.py     # Stacking ensemble
+│   ├── data/
+│   │   ├── raw/                  # Sirovi podaci
+│   │   ├── processed/            # Procesirani podaci
+│   │   └── models/               # Sačuvani modeli
+│   ├── utils/
+│   │   ├── __init__.py
+│   │   ├── tournament_manager.py # Upravljanje turnirima
+│   │   ├── hyperparameter_tuning.py # GridSearchCV
+│   │   └── evaluation.py         # Evaluacija modela
+│   └── config.py                 # Konfiguracija
+│
+├── frontend/
+│   ├── index.html
+│   ├── tournament.html
+│   ├── style.css
+│   ├── script.js
+│   └── tournament.js
+│
+├── api.py
+├── requirements.txt
+├── .env.example
+└── README.md
