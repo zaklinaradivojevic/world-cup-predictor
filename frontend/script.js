@@ -440,6 +440,103 @@ function init() {
     loadPredictionHistory();
     setupEventListeners();
 }
+// ============ INFO BUTTON ============
+function showInfoModal() {
+    // Kreiraj modal ako ne postoji
+    let modal = document.getElementById('infoModal');
+    
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'infoModal';
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease;
+        `;
+        
+        modal.innerHTML = `
+            <div style="background: var(--bg-primary); border-radius: 20px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; padding: 2rem; position: relative;">
+                <button id="closeModalBtn" style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-secondary);">&times;</button>
+                
+                <h2 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-robot" style="color: var(--primary);"></i>
+                    O AI Football Predictor-u
+                </h2>
+                
+                <div style="margin-bottom: 1.5rem;">
+                    <h3 style="margin-bottom: 0.5rem;">🧠 Ensemble ML Model</h3>
+                    <p style="color: var(--text-secondary);">Kombinacija <strong>XGBoost</strong>, <strong>Random Forest</strong> i <strong>Neural Network</strong> za najpreciznije predikcije.</p>
+                </div>
+                
+                <div style="margin-bottom: 1.5rem;">
+                    <h3 style="margin-bottom: 0.5rem;">📊 20+ Feature-a</h3>
+                    <ul style="color: var(--text-secondary); margin-left: 1.5rem;">
+                        <li>📈 Forma tima (poslednjih 5/10/15 utakmica)</li>
+                        <li>⚽ xG (Expected Goals) - Understat podaci</li>
+                        <li>🏆 FIFA rang lista i ELO rejting</li>
+                        <li>⚔️ Head-to-Head statistika</li>
+                        <li>🏟️ Domaći teren faktor (+20% prednosti)</li>
+                        <li>🤕 Povrede ključnih igrača</li>
+                        <li>🌤️ Vremenski uslovi</li>
+                    </ul>
+                </div>
+                
+                <div style="margin-bottom: 1.5rem;">
+                    <h3 style="margin-bottom: 0.5rem;">🎯 Tačnost Modela</h3>
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                        <div><span style="color: #667eea;">●</span> XGBoost: 76.2%</div>
+                        <div><span style="color: #f093fb;">●</span> Random Forest: 72.8%</div>
+                        <div><span style="color: #f5576c;">●</span> Neural Network: 74.1%</div>
+                        <div><span style="color: #FFD700;">●</span> Ensemble: 78-82%</div>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 1.5rem;">
+                    <h3 style="margin-bottom: 0.5rem;">📁 Izvori Podataka</h3>
+                    <ul style="color: var(--text-secondary); margin-left: 1.5rem;">
+                        <li>📊 FBref - statistike i rezultati</li>
+                        <li>📈 Understat - xG podaci</li>
+                        <li>🏆 FIFA - rang liste</li>
+                        <li>🌤️ OpenWeatherMap - vremenski uslovi</li>
+                    </ul>
+                </div>
+                
+                <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border); text-align: center; color: var(--text-tertiary); font-size: 0.8rem;">
+                    <p>© 2026 AI Football Predictor | Verzija 2.0</p>
+                    <p>XGBoost + Random Forest + Neural Network | Stacking Ensemble</p>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Zatvaranje modala
+        const closeBtn = document.getElementById('closeModalBtn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                modal.remove();
+            });
+        }
+        
+        // Zatvaranje klikom izvan modala
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+    } else {
+        modal.style.display = 'flex';
+    }
+}
 
 // Pokreni kad je DOM spreman
 document.addEventListener('DOMContentLoaded', init);
