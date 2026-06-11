@@ -10,7 +10,7 @@ const tournamentSelect = document.getElementById('tournamentSelect');
 const predictBtn = document.getElementById('predictBtn');
 const resultsSection = document.getElementById('resultsSection');
 const themeToggle = document.getElementById('themeToggle');
-const clearHistory = document.getElementById('clearHistory');
+const clearHistoryBtn = document.getElementById('clearHistory');
 const toggleFeatures = document.getElementById('toggleFeatures');
 const loadingOverlay = document.getElementById('loadingOverlay');
 const toast = document.getElementById('toast');
@@ -258,7 +258,7 @@ function setupEventListeners() {
     });
     if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
     if (infoBtn) infoBtn.addEventListener('click', showInfoModal);
-    if (clearHistory) clearHistory.addEventListener('click', clearHistory);
+    if (clearHistoryBtn) clearHistoryBtn.addEventListener('click', clearHistory);
     if (toggleFeatures) {
         toggleFeatures.addEventListener('click', () => {
             const content = document.getElementById('featuresContent');
