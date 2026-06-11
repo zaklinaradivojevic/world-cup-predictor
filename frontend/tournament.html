@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏆 World Cup 2026 - Turnirska Simulacija</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Dodatni stilovi specifični za tournament stranicu */
+        .tournament-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .simulation-controls {
+            background: var(--bg-secondary);
+            border-radius: 20px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            background: var(--bg-tertiary);
+            padding: 0.5rem 1rem;
+            border-radius: 12px;
+        }
+        
+        .control-group label {
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+        
+        .control-group input {
+            padding: 0.5rem 1rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            width: 80px;
+            text-align: center;
+        }
+        
+        .btn-simulate {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 0.8rem 2rem;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .btn-simulate:hover {
+            transform: translateY(-2px);
+        }
+        
+        .groups-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+        
+        .group-card {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            transition: transform 0.2s;
+        }
+        
+        .group-card:hover {
+            transform: translateY(-4px);
+        }
+        
+        .group-header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            padding: 1rem;
+            color: white;
+            font-weight: 800;
+            font-size: 1.2rem;
+            text-align: center;
+        }
+        
+        .group-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .group-table th,
+        .group-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .group-table th {
+            background: var(--bg-tertiary);
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+        
+        .group-table tr.qualified {
+            background: rgba(16, 185, 129, 0.1);
+            border-left: 3px solid #10b981;
+        }
+        
+        .knockout-bracket {
+            background: var(--bg-secondary);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-top: 2rem;
+            overflow-x: auto;
+        }
+        
+        .bracket-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        
+        .round-container {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 2rem;
+        }
+        
+        .round {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .round-title {
+            text-align: center;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            padding: 0.5rem;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+        }
+        
+        .match {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 0.75rem;
+            margin-bottom: 0.8rem;
+            border-left: 3px solid #667eea;
+        }
+        
+        .match-teams {
+            display: flex;
+            justify-content: space-between;
+            font-weight: 600;
+        }
+        
+        .match-winner {
+            font-size: 0.75rem;
+            color: #10b981;
+            margin-top: 0.3rem;
+            text-align: center;
+        }
+        
+        .champion-card {
+            text-align: center;
+            padding: 2rem;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2));
+            border-radius: 20px;
+            margin-top: 2rem;
+        }
+        
+        .champion-name {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        
+        .probabilities-list {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        
+        .prob-item {
+            margin: 1rem 0;
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        
+        .loader {
+            text-align: center;
+        }
+        
+        .loader-circle {
+            width: 60px;
+            height: 60px;
+            border: 3px solid var(--border);
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .stats-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        
+        .stat-card {
+            background: var(--bg-tertiary);
+            padding: 1rem;
+            border-radius: 12px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #FFD700;
+        }
+        
+        @media (max-width: 768px) {
+            .tournament-container {
+                padding: 1rem;
+            }
+            .groups-grid {
+                grid-template-columns: 1fr;
+            }
+            .round-container {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-futbol"></i>
+                <span>AI Predictor</span>
+                <span class="badge">Ensemble v2.0</span>
+            </div>
+            <div class="nav-links">
+                <a href="index.html"><i class="fas fa-chart-line"></i> Predikcija</a>
+                <a href="tournament.html" class="active"><i class="fas fa-trophy"></i> Turnir</a>
+                <a href="live.html"><i class="fas fa-broadcast-tower"></i> Uživo</a>
+                <a href="stats.html"><i class="fas fa-chart-bar"></i> Statistike</a>
+            </div>
+            <div class="nav-actions">
+                <button id="themeToggle" class="theme-toggle">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1 class="hero-title">🏆 World Cup 2026</h1>
+            <h2 class="hero-subtitle">AI Turnirska Simulacija</h2>
+            <p>XGBoost + Random Forest + Neural Network | Monte Carlo simulacija</p>
+        </div>
+    </section>
+
+    <div class="tournament-container">
+        <!-- Kontrole -->
+        <div class="simulation-controls">
+            <div class="control-group">
+                <label><i class="fas fa-chart-simple"></i> Broj simulacija:</label>
+                <input type="number" id="numSimulations" value="100" min="10" max="500">
+            </div>
+            <button id="simulateBtn" class="btn-simulate">
+                <i class="fas fa-play"></i> Pokreni Simulaciju
+            </button>
+            <button id="simulateGroupOnlyBtn" class="btn-simulate" style="background: linear-gradient(135deg, #f59e0b, #ef4444);">
+                <i class="fas fa-users"></i> Samo Grupna Faza
+            </button>
+        </div>
+
+        <!-- Statistika -->
+        <div id="statsSummary" class="stats-summary" style="display: none;">
+            <div class="stat-card">
+                <div class="stat-value" id="totalSimulations">0</div>
+                <div>Simulacija</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalMatches">0</div>
+                <div>Utakmica</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="avgAccuracy">0%</div>
+                <div>Prosečna tačnost</div>
+            </div>
+        </div>
+
+        <!-- Grupna faza -->
+        <div id="groupStageSection" style="display: none;">
+            <h2 style="margin-bottom: 1rem;"><i class="fas fa-users"></i> Grupna Faza</h2>
+            <div id="groupsGrid" class="groups-grid"></div>
+        </div>
+
+        <!-- Šanse za titulu -->
+        <div id="probabilitiesSection" style="display: none;">
+            <h2 style="margin-bottom: 1rem;"><i class="fas fa-chart-pie"></i> Šanse za Titulu</h2>
+            <div id="probabilitiesList" class="probabilities-list"></div>
+        </div>
+
+        <!-- Pobednik -->
+        <div id="championSection" style="display: none;">
+            <div class="champion-card">
+                <i class="fas fa-trophy" style="font-size: 3rem; color: #FFD700;"></i>
+                <h3>Predviđeni Pobednik</h3>
+                <div class="champion-name" id="championName">---</div>
+                <div id="championProb" style="margin-top: 0.5rem; color: var(--text-secondary);"></div>
+            </div>
+        </div>
+
+        <!-- Knockout bracket -->
+        <div id="bracketSection" class="knockout-bracket" style="display: none;">
+            <div class="bracket-title">
+                <i class="fas fa-diagram-project"></i> Nokaut Faza
+            </div>
+            <div id="bracketContainer" class="round-container"></div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="loader">
+            <div class="loader-circle"></div>
+            <div class="loader-text">AI simulacija u toku...</div>
+            <div class="loader-subtext">XGBoost + Random Forest + Neural Network</div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h4>AI Modeli</h4>
+                <ul>
+                    <li>XGBoost (Tunirani)</li>
+                    <li>Random Forest</li>
+                    <li>Neural Network</li>
+                    <li>Stacking Ensemble</li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>Simulacija</h4>
+                <ul>
+                    <li>48 timova</li>
+                    <li>12 grupa</li>
+                    <li>Nokaut faza</li>
+                    <li>Monte Carlo</li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>Performanse</h4>
+                <ul>
+                    <li>Tačnost: 78-82%</li>
+                    <li>100+ simulacija</li>
+                    <li>Real-time</li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>© 2026 AI Football Predictor | Ensemble ML System</p>
+        </div>
+    </footer>
+
+    <script src="tournament.js"></script>
+</body>
+</html>
