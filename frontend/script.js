@@ -1,5 +1,6 @@
-  // Glavni JavaScript fajl za index.html
+// Glavni JavaScript fajl za index.html
 
+// API konfiguracija
 const API_URL = 'http://localhost:5000/api';
 
 // DOM elementi
@@ -26,20 +27,22 @@ const TEAMS = [
 let currentTournament = 'World Cup';
 let selectedVenue = 'home';
 
-// Toast notifikacija
+// ============ POMOĆNE FUNKCIJE ============
+
 function showToast(message, type = 'success') {
     if (!toast) return;
+    const colors = { success: '#10b981', error: '#ef4444', warning: '#f59e0b', info: '#3b82f6' };
     toast.textContent = message;
-    toast.style.borderLeftColor = type === 'success' ? '#10b981' : '#f59e0b';
+    toast.style.borderLeftColor = colors[type];
     toast.style.display = 'block';
     setTimeout(() => { toast.style.display = 'none'; }, 3000);
 }
 
-// Loading
 function showLoading() { if (loadingOverlay) loadingOverlay.style.display = 'flex'; }
 function hideLoading() { if (loadingOverlay) loadingOverlay.style.display = 'none'; }
 
-// TEMA
+// ============ TEMA ============
+
 function loadTheme() {
     const savedTheme = localStorage.getItem('theme') || 'light';
     document.documentElement.setAttribute('data-theme', savedTheme);
@@ -54,10 +57,11 @@ function toggleTheme() {
     localStorage.setItem('theme', newTheme);
     const icon = themeToggle?.querySelector('i');
     if (icon) icon.className = newTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
-    showToast(`${newTheme === 'dark' ? '🌙 Tamna' : '☀️ Svetla'} tema`, 'info');
+    showToast(`${newTheme === 'dark' ? '🌙 Tamna' : '☀️ Svetla'} tema aktivirana`, 'info');
 }
 
-// INFO MODAL
+// ============ INFO MODAL ============
+
 function showInfoModal() {
     let modal = document.getElementById('infoModal');
     if (modal) { modal.remove(); return; }
@@ -81,72 +85,201 @@ function showInfoModal() {
     modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
 }
 
-// Timovi
+// ============ TIMOVI ============
+
 function populateTeamSelects() {
     if (!team1Select || !team2Select) return;
-    const options = TEAMS.map(t => `<option value="${t}">${t}</option>`).join('');
+    const options = TEAMS.map(team => `<option value="${team}">${team}</option>`).join('');
     team1Select.innerHTML = `<option value="">Izaberi domaćina</option>${options}`;
     team2Select.innerHTML = `<option value="">Izaberi gosta</option>${options}`;
 }
 
-// Simulacija predikcije
+// ============ SIMULACIJA PREDIKCIJE ============
+
 function simulatePrediction(team1, team2) {
-    const strength = { 'Brazil':0.95, 'Argentina':0.93, 'France':0.92, 'Germany':0.90, 'Spain':0.89, 'England':0.88 };
-    const s1 = strength[team1] || 0.7, s2 = strength[team2] || 0.7;
+    const teamStrength = {
+        'Brazil': 0.95, 'Argentina': 0.93, 'France': 0.92, 'Germany': 0.90,
+        'Spain': 0.89, 'England': 0.88, 'Netherlands': 0.85, 'Portugal': 0.84,
+        'Belgium': 0.83, 'Croatia': 0.80, 'Italy': 0.82, 'Uruguay': 0.78
+    };
+    const strength1 = teamStrength[team1] || 0.70;
+    const strength2 = teamStrength[team2] || 0.70;
     const homeFactor = selectedVenue === 'home' ? 1.2 : (selectedVenue === 'away' ? 0.85 : 1.0);
-    let h = (s1 * homeFactor) / (s1 * homeFactor + s2) * 0.7 + 0.15;
-    let a = s2 / (s1 * homeFactor + s2) * 0.7 + 0.15;
-    let d = 1 - h - a;
-    const sum = h + d + a;
-    h /= sum; d /= sum; a /= sum;
+    const adjustedStrength1 = strength1 * homeFactor;
+    const total = adjustedStrength1 + strength2;
+    let homeWinProb = (adjustedStrength1 / total) * 0.7 + 0.15;
+    let awayWinProb = (strength2 / total) * 0.7 + 0.15;
+    let drawProb = 1 - homeWinProb - awayWinProb;
+    const sum = homeWinProb + drawProb + awayWinProb;
+    homeWinProb = homeWinProb / sum;
+    drawProb = drawProb / sum;
+    awayWinProb = awayWinProb / sum;
     
-    let winner, conf;
-    if (h > d && h > a) { winner = team1; conf = h; }
-    else if (a > h && a > d) { winner = team2; conf = a; }
-    else { winner = "Nerešeno"; conf = d; }
+    let winner, confidence;
+    if (homeWinProb > drawProb && homeWinProb > awayWinProb) {
+        winner = team1;
+        confidence = homeWinProb;
+    } else if (awayWinProb > homeWinProb && awayWinProb > drawProb) {
+        winner = team2;
+        confidence = awayWinProb;
+    } else {
+        winner = "Nerešeno";
+        confidence = drawProb;
+    }
     
-    return { winner, confidence: Math.round(conf * 100), team1, team2, probabilities: { [`${team1}_win`]: Math.round(h*100), draw: Math.round(d*100), [`${team2}_win`]: Math.round(a*100) }, model_used: 'Ensemble (Simulacija)' };
+    return {
+        winner: winner,
+        confidence: Math.round(confidence * 100),
+        team1: team1,
+        team2: team2,
+        probabilities: {
+            [`${team1}_win`]: Math.round(homeWinProb * 100),
+            draw: Math.round(drawProb * 100),
+            [`${team2}_win`]: Math.round(awayWinProb * 100)
+        },
+        model_used: 'Ensemble (Simulacija)'
+    };
 }
 
-// Prikaz rezultata
 function displayResults(result) {
     if (!resultsSection) return;
-    document.getElementById('predictionResult').innerHTML = `<div class="winner-display"><div class="winner-name">${result.winner}</div><div class="winner-confidence">Sa ${result.confidence}% sigurnosti</div></div><div class="probability-bars"><div class="prob-item"><div class="prob-label"><span>${result.team1}</span><span>${result.probabilities[`${result.team1}_win`]}%</span></div><div class="prob-bar"><div class="prob-fill" style="width:${result.probabilities[`${result.team1}_win`]}%"></div></div></div><div class="prob-item"><div class="prob-label"><span>Nerešeno</span><span>${result.probabilities.draw}%</span></div><div class="prob-bar"><div class="prob-fill" style="width:${result.probabilities.draw}%"></div></div></div><div class="prob-item"><div class="prob-label"><span>${result.team2}</span><span>${result.probabilities[`${result.team2}_win`]}%</span></div><div class="prob-bar"><div class="prob-fill" style="width:${result.probabilities[`${result.team2}_win`]}%"></div></div></div></div>`;
-    document.getElementById('modelConfidence').innerHTML = `<div class="model-item"><div class="model-name">XGBoost<span>40%</span></div><div class="model-confidence-bar"><div class="model-confidence-fill" style="width:40%"></div></div></div><div class="model-item"><div class="model-name">Random Forest<span>35%</span></div><div class="model-confidence-bar"><div class="model-confidence-fill" style="width:35%"></div></div></div><div class="model-item"><div class="model-name">Neural Network<span>25%</span></div><div class="model-confidence-bar"><div class="model-confidence-fill" style="width:25%"></div></div></div>`;
+    
+    const predictionResult = document.getElementById('predictionResult');
+    const modelConfidence = document.getElementById('modelConfidence');
+    
+    predictionResult.innerHTML = `
+        <div class="winner-display">
+            <div class="winner-label"><i class="fas fa-robot"></i> Ensemble Model Predikcija</div>
+            <div class="winner-name">${result.winner}</div>
+            <div class="winner-confidence">Sa ${result.confidence}% sigurnosti</div>
+        </div>
+        <div class="probability-bars">
+            <div class="prob-item">
+                <div class="prob-label"><span>${result.team1}</span><span>${result.probabilities[`${result.team1}_win`]}%</span></div>
+                <div class="prob-bar"><div class="prob-fill" style="width:${result.probabilities[`${result.team1}_win`]}%"></div></div>
+            </div>
+            <div class="prob-item">
+                <div class="prob-label"><span>Nerešeno</span><span>${result.probabilities.draw}%</span></div>
+                <div class="prob-bar"><div class="prob-fill" style="width:${result.probabilities.draw}%;background:linear-gradient(90deg,#f59e0b,#ef4444);"></div></div>
+            </div>
+            <div class="prob-item">
+                <div class="prob-label"><span>${result.team2}</span><span>${result.probabilities[`${result.team2}_win`]}%</span></div>
+                <div class="prob-bar"><div class="prob-fill" style="width:${result.probabilities[`${result.team2}_win`]}%"></div></div>
+            </div>
+        </div>
+    `;
+    
+    modelConfidence.innerHTML = `
+        <div class="model-item"><div class="model-name">XGBoost (Tunirani)<span>40%</span></div><div class="model-confidence-bar"><div class="model-confidence-fill" style="width:40%;background:#667eea"></div></div></div>
+        <div class="model-item"><div class="model-name">Random Forest<span>35%</span></div><div class="model-confidence-bar"><div class="model-confidence-fill" style="width:35%;background:#f093fb"></div></div></div>
+        <div class="model-item"><div class="model-name">Neural Network<span>25%</span></div><div class="model-confidence-bar"><div class="model-confidence-fill" style="width:25%;background:#f5576c"></div></div></div>
+    `;
+    
     resultsSection.style.display = 'grid';
+    resultsSection.scrollIntoView({ behavior: 'smooth' });
 }
 
-// Predikcija
 async function predictMatch() {
-    const team1 = team1Select.value, team2 = team2Select.value;
-    if (!team1 || !team2) { showToast('Izaberite oba tima', 'warning'); return; }
+    const team1 = team1Select.value;
+    const team2 = team2Select.value;
+    
+    if (!team1 || !team2) { showToast('Molimo izaberite oba tima', 'warning'); return; }
     if (team1 === team2) { showToast('Izaberite različite timove', 'warning'); return; }
+    
     showLoading();
     try {
-        const response = await fetch(`${API_URL}/predict`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ team1, team2, tournament: currentTournament, venue: selectedVenue }) });
+        const response = await fetch(`${API_URL}/predict`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ team1, team2, tournament: currentTournament, venue: selectedVenue })
+        });
         const result = response.ok ? await response.json() : simulatePrediction(team1, team2);
         displayResults(result);
-    } catch (error) { displayResults(simulatePrediction(team1, team2)); showToast('API nedostupan, simulacija', 'warning'); }
-    finally { hideLoading(); }
+        addToRecentPredictions(team1, team2, result.winner, result.confidence);
+    } catch (error) {
+        const simulated = simulatePrediction(team1, team2);
+        displayResults(simulated);
+        addToRecentPredictions(team1, team2, simulated.winner, simulated.confidence);
+        showToast('API nije dostupan, prikazujem simulirane podatke', 'warning');
+    } finally { hideLoading(); }
 }
 
-// Istorija
-function loadPredictionHistory() { /* skraćeno */ }
-function clearHistory() { localStorage.removeItem('predictionHistory'); location.reload(); }
+// ============ ISTORIJA PREDIKCIJA ============
 
-// Event listeneri
+function addToRecentPredictions(team1, team2, winner, confidence) {
+    const container = document.getElementById('recentPredictions');
+    if (!container) return;
+    const emptyState = container.querySelector('.empty-state');
+    if (emptyState) emptyState.remove();
+    const recentItem = document.createElement('div');
+    recentItem.className = 'recent-item';
+    recentItem.innerHTML = `<div class="recent-match"><div class="recent-teams">${team1} vs ${team2}</div><div class="recent-vs">• ${currentTournament}</div></div><div><span class="recent-winner">🏆 ${winner}</span><span class="recent-confidence">(${confidence}%)</span></div>`;
+    container.insertBefore(recentItem, container.firstChild);
+    let history = JSON.parse(localStorage.getItem('predictionHistory') || '[]');
+    history.unshift({ team1, team2, winner, confidence, tournament: currentTournament, timestamp: Date.now() });
+    history = history.slice(0, 20);
+    localStorage.setItem('predictionHistory', JSON.stringify(history));
+}
+
+function loadPredictionHistory() {
+    const history = JSON.parse(localStorage.getItem('predictionHistory') || '[]');
+    const container = document.getElementById('recentPredictions');
+    if (!container) return;
+    if (history.length === 0) {
+        container.innerHTML = `<div class="empty-state"><i class="fas fa-chart-simple"></i><p>Još uvek nema predikcija</p></div>`;
+        return;
+    }
+    container.innerHTML = history.map(pred => `<div class="recent-item"><div class="recent-match"><div class="recent-teams">${pred.team1} vs ${pred.team2}</div><div class="recent-vs">• ${pred.tournament}</div></div><div><span class="recent-winner">🏆 ${pred.winner}</span><span class="recent-confidence">(${pred.confidence}%)</span></div></div>`).join('');
+}
+
+function clearHistory() {
+    localStorage.removeItem('predictionHistory');
+    loadPredictionHistory();
+    showToast('Istorija predikcija obrisana', 'info');
+}
+
+// ============ EVENT LISTENERI ============
+
 function setupEventListeners() {
-    predictBtn?.addEventListener('click', predictMatch);
-    tournamentSelect?.addEventListener('change', (e) => { currentTournament = e.target.value; showToast(`Prebačeno na ${currentTournament}`, 'info'); });
-    document.querySelectorAll('.venue-btn').forEach(btn => btn.addEventListener('click', () => { document.querySelectorAll('.venue-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); selectedVenue = btn.dataset.venue; }));
+    if (predictBtn) predictBtn.addEventListener('click', predictMatch);
+    if (tournamentSelect) {
+        tournamentSelect.addEventListener('change', (e) => {
+            currentTournament = e.target.value;
+            showToast(`Prebačeno na ${currentTournament}`, 'info');
+        });
+    }
+    const venueBtns = document.querySelectorAll('.venue-btn');
+    venueBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            venueBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            selectedVenue = btn.dataset.venue;
+        });
+    });
     if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
     if (infoBtn) infoBtn.addEventListener('click', showInfoModal);
     if (clearHistory) clearHistory.addEventListener('click', clearHistory);
+    if (toggleFeatures) {
+        toggleFeatures.addEventListener('click', () => {
+            const content = document.getElementById('featuresContent');
+            const icon = toggleFeatures.querySelector('i');
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                icon.classList.remove('fa-chevron-up');
+                icon.classList.add('fa-chevron-down');
+            } else {
+                content.style.display = 'none';
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-up');
+            }
+        });
+    }
 }
 
-// Inicijalizacija
+// ============ INICIJALIZACIJA ============
+
 function init() {
-    console.log('🚀 Inicijalizacija...');
+    console.log('🚀 AI Football Predictor inicijalizovan');
     console.log('themeToggle:', themeToggle);
     console.log('infoBtn:', infoBtn);
     loadTheme();
@@ -155,4 +288,5 @@ function init() {
     setupEventListeners();
 }
 
+// Pokreni kad je DOM spreman
 document.addEventListener('DOMContentLoaded', init);
