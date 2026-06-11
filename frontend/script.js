@@ -65,6 +65,7 @@ function hideLoading() {
 function loadTheme() {
     const savedTheme = localStorage.getItem('theme') || 'light';
     document.documentElement.setAttribute('data-theme', savedTheme);
+    
     const icon = themeToggle?.querySelector('i');
     if (icon) {
         icon.className = savedTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
@@ -78,7 +79,10 @@ function toggleTheme() {
     localStorage.setItem('theme', newTheme);
     
     const icon = themeToggle.querySelector('i');
-    icon.className = newTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+    if (icon) {
+        icon.className = newTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+    }
+    
     showToast(`${newTheme === 'dark' ? '🌙 Tamna' : '☀️ Svetla'} tema aktivirana`, 'info');
 }
 
@@ -385,7 +389,7 @@ function clearHistory() {
 
 // ============ EVENT LISTENERI ============
 
-function setupEventListeners() {
+ function setupEventListeners() {
     if (predictBtn) {
         predictBtn.addEventListener('click', predictMatch);
     }
@@ -406,8 +410,15 @@ function setupEventListeners() {
         });
     });
     
+    // THEME TOGGLE - popravljeno
     if (themeToggle) {
         themeToggle.addEventListener('click', toggleTheme);
+    }
+    
+    // INFO BUTTON - DODATO
+    const infoBtn = document.getElementById('infoBtn');
+    if (infoBtn) {
+        infoBtn.addEventListener('click', showInfoModal);
     }
     
     if (clearHistory) {
