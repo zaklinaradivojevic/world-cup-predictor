@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📡 World Cup 2026 - Utakmice Uživo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Live specifični stilovi */
+        .live-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .live-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        .live-badge {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            padding: 0.5rem 1rem;
+            border-radius: 100px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            animation: pulse 1.5s infinite;
+        }
+        
+        .live-dot {
+            width: 10px;
+            height: 10px;
+            background: white;
+            border-radius: 50%;
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        
+        .date-selector {
+            background: var(--bg-secondary);
+            padding: 0.5rem;
+            border-radius: 12px;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .date-btn {
+            padding: 0.5rem 1rem;
+            background: var(--bg-tertiary);
+            border: none;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .date-btn.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .matches-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .match-card {
+            background: var(--bg-secondary);
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .match-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--card-shadow-hover);
+        }
+        
+        .match-card.live {
+            border: 2px solid #ef4444;
+            animation: glow 2s infinite;
+        }
+        
+        @keyframes glow {
+            0%, 100% { border-color: #ef4444; box-shadow: 0 0 5px rgba(239, 68, 68, 0.3); }
+            50% { border-color: #dc2626; box-shadow: 0 0 15px rgba(239, 68, 68, 0.6); }
+        }
+        
+        .match-header {
+            background: var(--bg-tertiary);
+            padding: 0.75rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+        
+        .match-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .status-live {
+            color: #ef4444;
+            font-weight: 600;
+        }
+        
+        .status-finished {
+            color: #10b981;
+        }
+        
+        .status-upcoming {
+            color: #f59e0b;
+        }
+        
+        .match-body {
+            padding: 1.5rem;
+        }
+        
+        .teams {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .team {
+            flex: 1;
+            text-align: center;
+        }
+        
+        .team-name {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .team-score {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--primary);
+        }
+        
+        .vs {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+        
+        .match-probabilities {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+        
+        .prob-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+        }
+        
+        .prob-bar-container {
+            flex: 1;
+            margin: 0 1rem;
+            height: 6px;
+            background: var(--bg-tertiary);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .prob-bar-fill {
+            height: 100%;
+            transition: width 0.5s;
+        }
+        
+        .prediction-box {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            padding: 0.75rem;
+            border-radius: 12px;
+            margin-top: 1rem;
+            text-align: center;
+        }
+        
+        .prediction-text {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        
+        .prediction-winner {
+            color: #FFD700;
+            font-weight: 800;
+        }
+        
+        .refresh-btn {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            transition: transform 0.2s;
+            z-index: 100;
+        }
+        
+        .refresh-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        .no-matches {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-secondary);
+        }
+        
+        .no-matches i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+        
+        @media (max-width: 768px) {
+            .matches-grid {
+                grid-template-columns: 1fr;
+            }
+            .teams {
+                flex-direction: column;
+            }
+            .team-score {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-futbol"></i>
+                <span>AI Predictor</span>
+                <span class="badge">Ensemble v2.0</span>
+            </div>
+            <div class="nav-links">
+                <a href="index.html"><i class="fas fa-chart-line"></i> Predikcija</a>
+                <a href="tournament.html"><i class="fas fa-trophy"></i> Turnir</a>
+                <a href="live.html" class="active"><i class="fas fa-broadcast-tower"></i> Uživo</a>
+                <a href="stats.html"><i class="fas fa-chart-bar"></i> Statistike</a>
+            </div>
+            <div class="nav-actions">
+                <button id="themeToggle" class="theme-toggle">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <div class="live-badge">
+                <span class="live-dot"></span>
+                LIVE PREDIKCIJE
+            </div>
+            <h1 class="hero-title">📡 Utakmice <span class="gradient-text">Uživo</span></h1>
+            <p>AI predikcije za svaku utakmicu | Ažuriranje u realnom vremenu</p>
+        </div>
+    </section>
+
+    <div class="live-container">
+        <!-- Header sa datumima -->
+        <div class="live-header">
+            <div class="date-selector" id="dateSelector">
+                <button class="date-btn active" data-date="today">📅 Danas</button>
+                <button class="date-btn" data-date="tomorrow">📅 Sutra</button>
+                <button class="date-btn" data-date="all">📅 Sve utakmice</button>
+            </div>
+            <div>
+                <span id="lastUpdate" style="font-size: 0.8rem; color: var(--text-secondary);">
+                    Zadnje ažuriranje: --
+                </span>
+            </div>
+        </div>
+
+        <!-- Grid utakmica -->
+        <div id="matchesGrid" class="matches-grid">
+            <div class="no-matches">
+                <i class="fas fa-futbol"></i>
+                <p>Učitavanje utakmica...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Refresh dugme -->
+    <button id="refreshBtn" class="refresh-btn">
+        <i class="fas fa-sync-alt"></i>
+    </button>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="loader">
+            <div class="loader-circle"></div>
+            <div class="loader-text">AI analiza utakmica...</div>
+            <div class="loader-subtext">XGBoost + Random Forest + Neural Network</div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h4>Live Predikcije</h4>
+                <ul>
+                    <li>Real-time analiza</li>
+                    <li>AI verovatnoće</li>
+                    <li>Forma timova</li>
+                    <li>H2H statistika</li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>Faktori</h4>
+                <ul>
+                    <li>xG (Expected Goals)</li>
+                    <li>FIFA rang</li>
+                    <li>Povrede igrača</li>
+                    <li>Vremenski uslovi</li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>Ažuriranje</h4>
+                <ul>
+                    <li>Svakih 30 sekundi</li>
+                    <li>Live rezultati</li>
+                    <li>Promena kvota</li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>© 2026 AI Football Predictor | Ensemble ML System | Live predikcije</p>
+        </div>
+    </footer>
+
+    <script src="live.js"></script>
+</body>
+</html>
