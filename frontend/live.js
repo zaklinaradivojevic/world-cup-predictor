@@ -1,19 +1,16 @@
-// Live predikcije JavaScript - sa STVARNIM rezultatima sa API-ja
+// Live predikcije - TEST VERZIJA
 
 const API_URL = 'http://localhost:5000/api';
 
-// DOM elementi
 const matchesGrid = document.getElementById('matchesGrid');
 const refreshBtn = document.getElementById('refreshBtn');
 const themeToggle = document.getElementById('themeToggle');
 const lastUpdateSpan = document.getElementById('lastUpdate');
 const loadingOverlay = document.getElementById('loadingOverlay');
 
-// Stanje
 let currentTheme = localStorage.getItem('theme') || 'light';
 let selectedDate = 'today';
 let autoRefreshInterval = null;
-let liveMatches = [];
 
 // Tema
 function loadTheme() {
@@ -32,13 +29,6 @@ function toggleTheme() {
     if (icon) icon.className = newTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
 }
 
-function startAutoRefresh() {
-    if (autoRefreshInterval) clearInterval(autoRefreshInterval);
-    autoRefreshInterval = setInterval(() => {
-        loadLiveMatches(true);
-    }, 30000);
-}
-
 function showLoading() { if (loadingOverlay) loadingOverlay.style.display = 'flex'; }
 function hideLoading() { if (loadingOverlay) loadingOverlay.style.display = 'none'; }
 
@@ -47,106 +37,34 @@ function updateTimestamp() {
     lastUpdateSpan.textContent = `Zadnje ažuriranje: ${now.toLocaleTimeString()}`;
 }
 
-function filterMatchesByDate(matches) {
-    const today = new Date().toISOString().split('T')[0];
-    const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+// Dohvatanje podataka sa API-ja
+async function loadLiveMatches() {
+    showLoading();
     
-    if (selectedDate === 'today') return matches.filter(m => m.date === today);
-    if (selectedDate === 'tomorrow') return matches.filter(m => m.date === tomorrow);
-    return matches;
-}
-
-// Dohvatanje predikcije
-async function getPredictionForMatch(team1, team2, venue) {
     try {
-        const response = await fetch(`${API_URL}/predict`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ team1, team2, venue, tournament: 'World Cup' })
-        });
-        if (response.ok) return await response.json();
-    } catch (error) {
-        console.log('API nije dostupan, koristim simulaciju');
-    }
-    
-    return {
-        winner: Math.random() > 0.5 ? team1 : team2,
-        confidence: Math.floor(Math.random() * 30) + 50,
-        probabilities: {
-            [`${team1}_win`]: Math.floor(Math.random() * 40) + 30,
-            draw: Math.floor(Math.random() * 20) + 10,
-            [`${team2}_win`]: Math.floor(Math.random() * 40) + 30
-        }
-    };
-}
-
-// Dohvatanje utakmica sa API-ja
-async function fetchMatchesFromAPI() {
-    try {
+        console.log('📡 Dohvatam podatke sa:', `${API_URL}/live-matches`);
+        
         const response = await fetch(`${API_URL}/live-matches`);
         const data = await response.json();
         
-        if (data.matches && data.matches.length > 0) {
-            console.log('✅ Dohvaćene utakmice:', data.matches);
-            return data.matches;
-        }
-        return [];
-    } catch (error) {
-        console.error('❌ Greška:', error);
-        return [];
-    }
-}
-
-// Glavna funkcija za učitavanje i prikaz
-async function loadLiveMatches(silent = false) {
-    if (!silent) showLoading();
-    
-    try {
-        const apiMatches = await fetchMatchesFromAPI();
+        console.log('📊 Dobijeni podaci:', data);
         
-        if (apiMatches.length === 0) {
-            matchesGrid.innerHTML = `<div class="no-matches"><i class="fas fa-info-circle"></i><p>Trenutno nema dostupnih utakmica</p></div>`;
-            if (!silent) hideLoading();
+        if (!data.matches || data.matches.length === 0) {
+            matchesGrid.innerHTML = `<div class="no-matches"><i class="fas fa-info-circle"></i><p>Nema dostupnih utakmica</p></div>`;
+            hideLoading();
             return;
         }
         
-        // Filtriraj po datumu
-        let filteredMatches = apiMatches;
-        if (selectedDate === 'today') {
-            const today = new Date().toISOString().split('T')[0];
-            filteredMatches = apiMatches.filter(m => m.date === today);
-        } else if (selectedDate === 'tomorrow') {
-            const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
-            filteredMatches = apiMatches.filter(m => m.date === tomorrow);
-        }
-        
-        if (filteredMatches.length === 0) {
-            matchesGrid.innerHTML = `<div class="no-matches"><i class="fas fa-calendar-day"></i><p>Nema utakmica za izabrani datum</p></div>`;
-            if (!silent) hideLoading();
-            return;
-        }
-        
+        // Prikaži utakmice
         matchesGrid.innerHTML = '';
         
-        for (const match of filteredMatches) {
-            const prediction = await getPredictionForMatch(match.team1, match.team2, 'neutral');
+        for (const match of data.matches) {
+            const statusText = match.status === 'finished' ? '✅ Završeno' : (match.status === 'live' ? '🔴 UŽIVO' : '📅 Ususret');
+            const statusColor = match.status === 'finished' ? '#10b981' : (match.status === 'live' ? '#ef4444' : '#f59e0b');
             
-            // Odredi status i boju
-            let statusText = '', statusColor = '';
-            if (match.status === 'finished') {
-                statusText = '✅ Završeno';
-                statusColor = '#10b981';
-            } else if (match.status === 'live') {
-                statusText = '🔴 UŽIVO';
-                statusColor = '#ef4444';
-            } else {
-                statusText = '📅 Ususret';
-                statusColor = '#f59e0b';
-            }
-            
-            // Prikaz rezultata - PRAVI REZULTATI!
+            // Prikaz rezultata
             let scoreDisplay = '';
-            if (match.status === 'finished' && match.home_goals !== undefined && match.away_goals !== undefined) {
+            if (match.status === 'finished' && match.home_goals !== undefined) {
                 scoreDisplay = `
                     <div class="teams">
                         <div class="team">
@@ -176,97 +94,41 @@ async function loadLiveMatches(silent = false) {
                 `;
             }
             
-            // Tekst pobednika
-            let winnerText = '';
-            if (match.status === 'finished') {
-                if (match.winner) {
-                    winnerText = `🏆 ${match.winner} (utakmica završena)`;
-                } else if (match.home_goals === match.away_goals) {
-                    winnerText = `🏆 Nerešeno (utakmica završena)`;
-                } else {
-                    winnerText = `🏆 ${match.home_goals > match.away_goals ? match.team1 : match.team2} (utakmica završena)`;
-                }
-            } else {
-                winnerText = `${prediction.winner} (${prediction.confidence}% sigurnosti)`;
-            }
-            
-            // Vreme i grupa
-            const matchTime = match.time || '--:--';
-            const matchGroup = match.group || '?';
-            
             const matchCard = document.createElement('div');
-            matchCard.className = `match-card ${match.status === 'live' ? 'live' : ''}`;
-            
+            matchCard.className = 'match-card';
             matchCard.innerHTML = `
                 <div class="match-header">
-                    <span><i class="fas fa-calendar-alt"></i> ${match.date} | ${matchTime}</span>
-                    <span><i class="fas fa-users"></i> Grupa ${matchGroup}</span>
+                    <span><i class="fas fa-calendar-alt"></i> ${match.date} | ${match.time || '--:--'}</span>
+                    <span><i class="fas fa-users"></i> Grupa ${match.group || '?'}</span>
                 </div>
                 <div class="match-body">
                     <div class="match-status">
-                        <span style="color: ${statusColor}">
-                            ${statusText}
-                        </span>
+                        <span style="color: ${statusColor}">${statusText}</span>
                     </div>
-                    
                     ${scoreDisplay}
-                    
-                    <div class="match-probabilities">
-                        <div class="prob-row">
-                            <span>${match.team1}</span>
-                            <div class="prob-bar-container">
-                                <div class="prob-bar-fill" style="width: ${prediction.probabilities[`${match.team1}_win`]}%; background: linear-gradient(90deg, #667eea, #764ba2);"></div>
-                            </div>
-                            <span>${prediction.probabilities[`${match.team1}_win`]}%</span>
-                        </div>
-                        <div class="prob-row">
-                            <span>Nerešeno</span>
-                            <div class="prob-bar-container">
-                                <div class="prob-bar-fill" style="width: ${prediction.probabilities.draw}%; background: linear-gradient(90deg, #f59e0b, #ef4444);"></div>
-                            </div>
-                            <span>${prediction.probabilities.draw}%</span>
-                        </div>
-                        <div class="prob-row">
-                            <span>${match.team2}</span>
-                            <div class="prob-bar-container">
-                                <div class="prob-bar-fill" style="width: ${prediction.probabilities[`${match.team2}_win`]}%; background: linear-gradient(90deg, #10b981, #059669);"></div>
-                            </div>
-                            <span>${prediction.probabilities[`${match.team2}_win`]}%</span>
-                        </div>
-                    </div>
-                    
-                    <div class="prediction-box">
+                    <div class="prediction-box" style="margin-top: 1rem; padding: 0.5rem; background: rgba(102,126,234,0.1); border-radius: 8px; text-align: center;">
                         <div class="prediction-text">
-                            🤖 AI predviđa: 
-                            <span class="prediction-winner">${winnerText}</span>
+                            🤖 AI predviđa: <span class="prediction-winner">${match.winner || match.team1}</span>
                         </div>
                     </div>
                 </div>
             `;
-            
             matchesGrid.appendChild(matchCard);
-            
-            // Animacija
-            setTimeout(() => {
-                const bars = matchCard.querySelectorAll('.prob-bar-fill');
-                if (bars[0]) bars[0].style.width = `${prediction.probabilities[`${match.team1}_win`]}%`;
-                if (bars[1]) bars[1].style.width = `${prediction.probabilities.draw}%`;
-                if (bars[2]) bars[2].style.width = `${prediction.probabilities[`${match.team2}_win`]}%`;
-            }, 100);
         }
         
         updateTimestamp();
+        
     } catch (error) {
-        console.error('Greška:', error);
-        matchesGrid.innerHTML = `<div class="no-matches"><i class="fas fa-exclamation-triangle"></i><p>Greška pri učitavanju</p></div>`;
+        console.error('❌ Greška:', error);
+        matchesGrid.innerHTML = `<div class="no-matches"><i class="fas fa-exclamation-triangle"></i><p>Greška pri učitavanju: ${error.message}</p><button onclick="location.reload()" style="margin-top:1rem;padding:0.5rem 1rem;">Pokušaj ponovo</button></div>`;
     } finally {
-        if (!silent) hideLoading();
+        hideLoading();
     }
 }
 
 // Event listeneri
 function setupEventListeners() {
-    if (refreshBtn) refreshBtn.addEventListener('click', () => loadLiveMatches(false));
+    if (refreshBtn) refreshBtn.addEventListener('click', () => loadLiveMatches());
     if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
     
     const dateBtns = document.querySelectorAll('.date-btn');
@@ -275,7 +137,7 @@ function setupEventListeners() {
             dateBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             selectedDate = btn.dataset.date;
-            loadLiveMatches(false);
+            loadLiveMatches();
         });
     });
 }
@@ -285,8 +147,8 @@ function init() {
     console.log('🚀 Live stranica inicijalizovana');
     loadTheme();
     setupEventListeners();
-    loadLiveMatches(false);
-    startAutoRefresh();
+    loadLiveMatches();
+    setInterval(() => loadLiveMatches(), 60000); // refresh svakih 60 sekundi
 }
 
 document.addEventListener('DOMContentLoaded', init);
