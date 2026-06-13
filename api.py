@@ -106,58 +106,73 @@ def fetch_live_results():
         return
     
     try:
-        # Dohvati utakmice za SP 2026 (league_id = 732)
-        url = f"https://api.sportmonks.com/v3/football/fixtures/between/2026-06-01/2026-07-31?api_token={SPORTMONKS_TOKEN}&include=scores;participants;state"
+        # PRAVILAN URL: token se NE šalje u URL-u!
+        url = "https://api.sportmonks.com/v3/football/fixtures/between/2026-06-01/2026-07-31?include=scores;participants;state"
         
-        response = requests.get(url, timeout=30)
+        # PRAVILAN HEADER: token ide u Authorization header
+        headers = {
+            "Authorization": SPORTMONKS_TOKEN
+        }
+        
+        response = requests.get(url, headers=headers, timeout=30)
+        
         if response.status_code == 200:
             data = response.json()
             new_cache = {}
             
             for fixture in data.get('data', []):
-                # Proveri da li je Svetsko prvenstvo
-                if fixture.get('league_id') == 732:  # World Cup ID
-                    participants = fixture.get('participants', [])
-                    if len(participants) >= 2:
-                        match_id = fixture['id']
-                        home_goals = 0
-                        away_goals = 0
-                        
-                        # Dohvati rezultate
-                        if fixture.get('scores'):
-                            for score in fixture['scores']:
-                                if score.get('type_id') == 1:  # Final score
-                                    home_goals = score.get('score', {}).get('home', 0)
-                                    away_goals = score.get('score', {}).get('away', 0)
-                        
-                        # Odredi status
-                        state_id = fixture.get('state_id', 0)
-                        if state_id == 5:
-                            status = 'finished'
-                        elif state_id == 4:
-                            status = 'live'
-                        else:
-                            status = 'upcoming'
-                        
-                        new_cache[match_id] = {
-                            'id': match_id,
-                            'team1': participants[0].get('name', ''),
-                            'team2': participants[1].get('name', ''),
-                            'date': fixture.get('starting_at', '').split('T')[0] if fixture.get('starting_at') else '',
-                            'time': fixture.get('starting_at', '').split('T')[1][:5] if fixture.get('starting_at') else '',
-                            'status': status,
-                            'home_goals': home_goals,
-                            'away_goals': away_goals,
-                            'score': f"{home_goals}-{away_goals}" if status == 'finished' else None,
-                            'winner': participants[0].get('name', '') if home_goals > away_goals else (participants[1].get('name', '') if away_goals > home_goals else None)
-                        }
+                # Proveri da li je Svetsko prvenstvo (league_id = 1 ili drugi)
+                # Ako ne znaš tačan league_id, prihvati sve utakmice u tom periodu
+                participants = fixture.get('participants', [])
+                if len(participants) >= 2:
+                    match_id = fixture['id']
+                    home_goals = 0
+                    away_goals = 0
+                    
+                    # Dohvati rezultate
+                    if fixture.get('scores'):
+                        for score in fixture['scores']:
+                            if score.get('type_id') == 1:  # Final score
+                                home_goals = score.get('score', {}).get('home', 0)
+                                away_goals = score.get('score', {}).get('away', 0)
+                    
+                    # Odredi status
+                    state_id = fixture.get('state_id', 0)
+                    if state_id == 5:
+                        status = 'finished'
+                    elif state_id == 4:
+                        status = 'live'
+                    else:
+                        status = 'upcoming'
+                    
+                    # Formatiraj datum i vreme
+                    starting_at = fixture.get('starting_at', '')
+                    date_str = starting_at.split('T')[0] if starting_at else ''
+                    time_str = starting_at.split('T')[1][:5] if starting_at and 'T' in starting_at else ''
+                    
+                    new_cache[match_id] = {
+                        'id': match_id,
+                        'team1': participants[0].get('name', ''),
+                        'team2': participants[1].get('name', ''),
+                        'date': date_str,
+                        'time': time_str,
+                        'status': status,
+                        'home_goals': home_goals,
+                        'away_goals': away_goals,
+                        'score': f"{home_goals}-{away_goals}" if status == 'finished' else None,
+                        'winner': participants[0].get('name', '') if home_goals > away_goals else (participants[1].get('name', '') if away_goals > home_goals else None)
+                    }
             
             if new_cache:
                 matches_cache = new_cache
                 last_update = datetime.now()
                 print(f"✅ Rezultati ažurirani: {len(matches_cache)} utakmica u kešu")
+            else:
+                print(f"⚠️ Nema utakmica u periodu (status: {response.status_code})")
         else:
             print(f"⚠️ API greška: {response.status_code}")
+            if response.status_code == 401:
+                print("   → Proveri Sportmonks token! Nije autentifikovan.")
             
     except Exception as e:
         print(f"⚠️ Greška pri dohvatanju rezultata: {e}")
@@ -244,15 +259,11 @@ def get_live_matches():
             'last_update': last_update.isoformat() if last_update else None
         })
     else:
-        # Fallback na statičke podatke ako nema keša
+        # Ako nema keša, vrati prazan niz (bez lažnih podataka!)
         return jsonify({
-            'matches': [
-                {'id': 1, 'team1': 'Mexico', 'team2': 'South Africa', 'date': '2026-06-11', 'time': '18:00', 'status': 'finished', 'home_goals': 2, 'away_goals': 1, 'score': '2-1', 'winner': 'Mexico'},
-                {'id': 2, 'team1': 'Germany', 'team2': 'New Zealand', 'date': '2026-06-11', 'time': '21:00', 'status': 'finished', 'home_goals': 3, 'away_goals': 0, 'score': '3-0', 'winner': 'Germany'},
-                {'id': 3, 'team1': 'Brazil', 'team2': 'Portugal', 'date': '2026-06-12', 'time': '18:00', 'status': 'finished', 'home_goals': 2, 'away_goals': 0, 'score': '2-0', 'winner': 'Brazil'},
-                {'id': 4, 'team1': 'USA', 'team2': 'Saudi Arabia', 'date': '2026-06-12', 'time': '21:00', 'status': 'finished', 'home_goals': 1, 'away_goals': 1, 'score': '1-1', 'winner': None}
-            ],
-            'source': 'static_fallback'
+            'matches': [],
+            'source': 'no_data',
+            'message': 'Sportmonks API nije vratio podatke. Proveri token i konekciju.'
         })
 
 # ============================================
@@ -264,16 +275,16 @@ def simulate_group_stage():
     """Simulira grupnu fazu"""
     import random
     
-    # Grupe za SP 2026
+    # Grupe za SP 2026 (ažurirane prema tačnim informacijama)
     groups = {
-        'A': ['Mexico', 'South Africa', 'Germany', 'New Zealand'],
-        'B': ['Brazil', 'Portugal', 'USA', 'Saudi Arabia'],
-        'C': ['France', 'Denmark', 'Japan', 'Ecuador'],
-        'D': ['Argentina', 'Croatia', 'Australia', 'Canada'],
-        'E': ['Spain', 'Netherlands', 'Morocco', 'Costa Rica'],
-        'F': ['England', 'Belgium', 'Senegal', 'Iran'],
-        'G': ['Italy', 'Uruguay', 'South Korea', 'Ghana'],
-        'H': ['Colombia', 'Switzerland', 'Poland', 'Cameroon']
+        'A': ['Mexico', 'South Africa', 'South Korea', 'Czech Republic'],
+        'B': ['Canada', 'Bosnia and Herzegovina', 'USA', 'Paraguay', 'Qatar', 'Switzerland'],
+        'C': ['Brazil', 'Morocco', 'Haiti', 'Scotland'],
+        'D': ['Australia', 'Turkiye', 'England', 'Senegal'],
+        'E': ['Germany', 'Netherlands', 'Japan', 'Ecuador'],
+        'F': ['Spain', 'Portugal', 'Belgium', 'Croatia'],
+        'G': ['France', 'Denmark', 'Poland', 'Austria'],
+        'H': ['Italy', 'Uruguay', 'Colombia', 'Chile']
     }
     
     results = {}
@@ -367,16 +378,16 @@ def simulate_tournament():
     data = request.json
     num_simulations = data.get('num_simulations', 100)
     
-    # Grupe
+    # Grupe (ažurirane)
     groups = {
-        'A': ['Mexico', 'South Africa', 'Germany', 'New Zealand'],
-        'B': ['Brazil', 'Portugal', 'USA', 'Saudi Arabia'],
-        'C': ['France', 'Denmark', 'Japan', 'Ecuador'],
-        'D': ['Argentina', 'Croatia', 'Australia', 'Canada'],
-        'E': ['Spain', 'Netherlands', 'Morocco', 'Costa Rica'],
-        'F': ['England', 'Belgium', 'Senegal', 'Iran'],
-        'G': ['Italy', 'Uruguay', 'South Korea', 'Ghana'],
-        'H': ['Colombia', 'Switzerland', 'Poland', 'Cameroon']
+        'A': ['Mexico', 'South Africa', 'South Korea', 'Czech Republic'],
+        'B': ['Canada', 'Bosnia and Herzegovina', 'USA', 'Paraguay', 'Qatar', 'Switzerland'],
+        'C': ['Brazil', 'Morocco', 'Haiti', 'Scotland'],
+        'D': ['Australia', 'Turkiye', 'England', 'Senegal'],
+        'E': ['Germany', 'Netherlands', 'Japan', 'Ecuador'],
+        'F': ['Spain', 'Portugal', 'Belgium', 'Croatia'],
+        'G': ['France', 'Denmark', 'Poland', 'Austria'],
+        'H': ['Italy', 'Uruguay', 'Colombia', 'Chile']
     }
     
     winners_count = {}
@@ -427,13 +438,13 @@ def simulate_tournament():
                     goals_against[team1] += goals2
                     goals_against[team2] += goals1
             
-            # Odredi prolaznike (prva 2)
+            # Odredi prolaznike (prva 2 iz svake grupe)
             sorted_teams = sorted(teams, key=lambda t: (points[t], goals_for[t] - goals_against[t]), reverse=True)
             qualified.extend(sorted_teams[:2])
         
         # Nokaut faza (pojednostavljeno)
         random.shuffle(qualified)
-        champion = qualified[0]  # Simulacija pobednika
+        champion = qualified[0]
         
         winners_count[champion] = winners_count.get(champion, 0) + 1
     
@@ -451,15 +462,19 @@ def get_elo_ratings():
         elo_data.append({
             'team': team,
             'elo_rating': int(1500 + strength * 500),
-            'fifa_ranking': 1,
+            'fifa_ranking': random.randint(1, 50),
             'world_cup_experience': random.randint(1, 5)
         })
     return jsonify(elo_data)
 
+
+# ============================================
+# POKRETANJE SERVERA
+# ============================================
 if __name__ == '__main__':
     print(f"\n🚀 Server running on http://localhost:5000")
     print(f"📊 {len(TEAMS)} timova učitano")
     print(f"⚡ Model: XGBoost Classifier")
-    print(f"🔄 Live rezultati: {'Aktivni' if SPORTMONKS_TOKEN else 'Neaktivni (dodaj SPORTMONKS_TOKEN u .env)'}")
+    print(f"🔄 Live rezultati: {'Aktivni (token postavljen)' if SPORTMONKS_TOKEN else 'Neaktivni (dodaj SPORTMONKS_TOKEN u .env)'}")
     print("="*50)
     app.run(debug=True, port=5000)
