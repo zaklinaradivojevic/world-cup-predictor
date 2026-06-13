@@ -8,6 +8,10 @@ import joblib
 import numpy as np
 import os
 import random
+import requests
+from datetime import datetime
+import time
+import threading
 
 app = Flask(__name__)
 CORS(app)
@@ -60,6 +64,13 @@ TEAM_STRENGTH = {
     'Denmark': 0.68, 'Austria': 0.61, 'Czech Republic': 0.60
 }
 
+# Sportmonks token
+SPORTMONKS_TOKEN = os.getenv('SPORTMONKS_TOKEN', '')
+
+# Cache za rezultate utakmica
+matches_cache = {}
+last_update = None
+
 def get_strength(team):
     return TEAM_STRENGTH.get(team, 0.65)
 
@@ -81,6 +92,89 @@ def prepare_features(team1, team2, venue):
     ]])
     
     return features
+
+# ============================================
+# POZADINSKO AŽURIRANJE REZULTATA
+# ============================================
+
+def fetch_live_results():
+    """Dohvata žive rezultate sa Sportmonks API-ja"""
+    global matches_cache, last_update
+    
+    if not SPORTMONKS_TOKEN:
+        print("⚠️ Sportmonks token nije podešen. Rezultati se neće automatski ažurirati.")
+        return
+    
+    try:
+        # Dohvati utakmice za SP 2026 (league_id = 732)
+        url = f"https://api.sportmonks.com/v3/football/fixtures/between/2026-06-01/2026-07-31?api_token={SPORTMONKS_TOKEN}&include=scores;participants;state"
+        
+        response = requests.get(url, timeout=30)
+        if response.status_code == 200:
+            data = response.json()
+            new_cache = {}
+            
+            for fixture in data.get('data', []):
+                # Proveri da li je Svetsko prvenstvo
+                if fixture.get('league_id') == 732:  # World Cup ID
+                    participants = fixture.get('participants', [])
+                    if len(participants) >= 2:
+                        match_id = fixture['id']
+                        home_goals = 0
+                        away_goals = 0
+                        
+                        # Dohvati rezultate
+                        if fixture.get('scores'):
+                            for score in fixture['scores']:
+                                if score.get('type_id') == 1:  # Final score
+                                    home_goals = score.get('score', {}).get('home', 0)
+                                    away_goals = score.get('score', {}).get('away', 0)
+                        
+                        # Odredi status
+                        state_id = fixture.get('state_id', 0)
+                        if state_id == 5:
+                            status = 'finished'
+                        elif state_id == 4:
+                            status = 'live'
+                        else:
+                            status = 'upcoming'
+                        
+                        new_cache[match_id] = {
+                            'id': match_id,
+                            'team1': participants[0].get('name', ''),
+                            'team2': participants[1].get('name', ''),
+                            'date': fixture.get('starting_at', '').split('T')[0] if fixture.get('starting_at') else '',
+                            'time': fixture.get('starting_at', '').split('T')[1][:5] if fixture.get('starting_at') else '',
+                            'status': status,
+                            'home_goals': home_goals,
+                            'away_goals': away_goals,
+                            'score': f"{home_goals}-{away_goals}" if status == 'finished' else None,
+                            'winner': participants[0].get('name', '') if home_goals > away_goals else (participants[1].get('name', '') if away_goals > home_goals else None)
+                        }
+            
+            if new_cache:
+                matches_cache = new_cache
+                last_update = datetime.now()
+                print(f"✅ Rezultati ažurirani: {len(matches_cache)} utakmica u kešu")
+        else:
+            print(f"⚠️ API greška: {response.status_code}")
+            
+    except Exception as e:
+        print(f"⚠️ Greška pri dohvatanju rezultata: {e}")
+
+def update_results_background():
+    """Pokreće pozadinsku nit za ažuriranje rezultata svakih 60 sekundi"""
+    while True:
+        fetch_live_results()
+        time.sleep(60)  # Ažuriraj svakih 60 sekundi
+
+# Pokreni pozadinsku nit ako postoji token
+if SPORTMONKS_TOKEN:
+    thread = threading.Thread(target=update_results_background, daemon=True)
+    thread.start()
+    print("🔄 Pozadinsko ažuriranje rezultata pokrenuto (svakih 60 sekundi)")
+else:
+    print("⚠️ Sportmonks token nije podešen - live rezultati neće biti dostupni")
 
 # ============================================
 # ENDPOINTI
@@ -135,8 +229,31 @@ def health():
     return jsonify({
         'status': 'ok',
         'model_loaded': model is not None,
-        'teams_count': len(TEAMS)
+        'teams_count': len(TEAMS),
+        'matches_cached': len(matches_cache),
+        'last_update': last_update.isoformat() if last_update else None
     })
+
+@app.route('/api/live-matches', methods=['GET'])
+def get_live_matches():
+    """Vraća sve utakmice sa keširanim rezultatima"""
+    if matches_cache:
+        return jsonify({
+            'matches': list(matches_cache.values()),
+            'source': 'sportmonks',
+            'last_update': last_update.isoformat() if last_update else None
+        })
+    else:
+        # Fallback na statičke podatke ako nema keša
+        return jsonify({
+            'matches': [
+                {'id': 1, 'team1': 'Mexico', 'team2': 'South Africa', 'date': '2026-06-11', 'time': '18:00', 'status': 'finished', 'home_goals': 2, 'away_goals': 1, 'score': '2-1', 'winner': 'Mexico'},
+                {'id': 2, 'team1': 'Germany', 'team2': 'New Zealand', 'date': '2026-06-11', 'time': '21:00', 'status': 'finished', 'home_goals': 3, 'away_goals': 0, 'score': '3-0', 'winner': 'Germany'},
+                {'id': 3, 'team1': 'Brazil', 'team2': 'Portugal', 'date': '2026-06-12', 'time': '18:00', 'status': 'finished', 'home_goals': 2, 'away_goals': 0, 'score': '2-0', 'winner': 'Brazil'},
+                {'id': 4, 'team1': 'USA', 'team2': 'Saudi Arabia', 'date': '2026-06-12', 'time': '21:00', 'status': 'finished', 'home_goals': 1, 'away_goals': 1, 'score': '1-1', 'winner': None}
+            ],
+            'source': 'static_fallback'
+        })
 
 # ============================================
 # TURNIR SIMULACIJA
@@ -343,5 +460,6 @@ if __name__ == '__main__':
     print(f"\n🚀 Server running on http://localhost:5000")
     print(f"📊 {len(TEAMS)} timova učitano")
     print(f"⚡ Model: XGBoost Classifier")
+    print(f"🔄 Live rezultati: {'Aktivni' if SPORTMONKS_TOKEN else 'Neaktivni (dodaj SPORTMONKS_TOKEN u .env)'}")
     print("="*50)
     app.run(debug=True, port=5000)
