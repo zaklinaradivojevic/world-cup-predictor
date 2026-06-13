@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Sitemap: https://zaklinaradivojevic.github.io/world-cup-predictor/frontend/sitemap.xml
+
+# Zabrani botovima da indeksiraju određene foldere
+Disallow: /backend/
+Disallow: /data/
