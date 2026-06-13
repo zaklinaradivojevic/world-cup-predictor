@@ -1,0 +1,7 @@
+team1_strength
+team2_strength
+home_factor
+venue_home
+venue_neutral
+venue_away
+strength_diff
