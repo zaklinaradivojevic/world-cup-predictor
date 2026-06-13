@@ -1,39 +1,38 @@
-"""
-Testiranje API ključeva
-"""
 
 import requests
 import os
 from dotenv import load_dotenv
 
-# Učitaj .env fajl
 load_dotenv()
 
 def test_sportmonks():
-    print("\n⚽ Testiram Sportmonks...")
+    print("\n⚽ Testiram Sportmonks (token u URL-u)...")
     token = os.getenv('SPORTMONKS_TOKEN')
     
     if not token:
         print("   ❌ Nema API ključa u .env fajlu!")
         return False
-    
-    # Sportmonks zahteva token kao URL parametar, ne kao header!
-    url = f"https://soccer.sportmonks.com/api/v2.0/leagues?api_token={token}"
+
+    # ISPRAVAN URL: token ide kao parametar, NE kao header
+    url = f"https://api.sportmonks.com/v3/football/livescores/inplay?api_token={token}&include=participants;scores"
     
     try:
-        response = requests.get(url, timeout=10)
+        response = requests.get(url, timeout=15)  # Bez headers!
+        
         if response.status_code == 200:
-            data = response.json()
-            print(f"   ✅ Sportmonks radi! ({len(data.get('data', []))} liga)")
+            print("   ✅ Sportmonks radi!")
             return True
+        elif response.status_code == 401:
+            print("   ❌ Greška 401: API token nije ispravan. Proveri token na dashboard-u.")
+            return False
         else:
             print(f"   ❌ Greška: Status {response.status_code}")
-            print(f"   Odgovor: {response.text[:200]}")
             return False
     except Exception as e:
-        print(f"   ❌ Greška: {e}")
+        print(f"   ❌ Greška pri povezivanju: {e}")
         return False
-
+   
+    
 def test_football_api():
     print("\n⚽ Testiram Football-Data.org...")
     token = os.getenv('FOOTBALL_DATA_API_KEY')
