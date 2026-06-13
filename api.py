@@ -1,143 +1,174 @@
+"""
+World Cup 2026 Prediction API - Simple version (bez TensorFlow)
+Radi na Python 3.14 bez dodatnih biblioteka
+"""
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from backend.features.feature_engineering import FeatureEngineer
-from backend.models.ensemble_model import EnsemblePredictor
-from backend.utils.tournament_manager import TournamentManager
-from backend.config import Config
-import pandas as pd
-import json
+import random
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
-# Inicijalizacija
-engineer = FeatureEngineer()
-predictor = EnsemblePredictor()
-tournament_manager = TournamentManager()
+# ============================================
+# LISTA TIMOVA ZA SP 2026
+# ============================================
+TEAMS = [
+    "Brazil", "Argentina", "France", "Germany", "Spain", "England",
+    "Netherlands", "Portugal", "Belgium", "Croatia", "Italy", "Uruguay",
+    "Mexico", "USA", "Japan", "Morocco", "Senegal", "Australia",
+    "South Africa", "South Korea", "Colombia", "Switzerland", "Poland",
+    "Chile", "Nigeria", "Sweden", "Denmark", "Austria", "Czech Republic"
+]
 
-# Pokušaj da učitaš istrenirani model
-try:
-    predictor.load_models()
-    print("✅ Ensemble model učitan")
-except:
-    print("⚠️ Model nije pronađen, pokreni train_model.py prvo")
+# ============================================
+# JAČINA TIMOVA (0-1 skala)
+# ============================================
+TEAM_STRENGTH = {
+    'Brazil': 0.95,
+    'Argentina': 0.93,
+    'France': 0.92,
+    'Germany': 0.90,
+    'Spain': 0.89,
+    'England': 0.88,
+    'Netherlands': 0.85,
+    'Portugal': 0.84,
+    'Belgium': 0.83,
+    'Croatia': 0.80,
+    'Italy': 0.82,
+    'Uruguay': 0.78,
+    'Mexico': 0.75,
+    'USA': 0.74,
+    'Japan': 0.72,
+    'Morocco': 0.70,
+    'Senegal': 0.68,
+    'Australia': 0.65,
+    'South Africa': 0.60,
+    'South Korea': 0.62,
+    'Colombia': 0.73,
+    'Switzerland': 0.69,
+    'Poland': 0.67,
+    'Chile': 0.66,
+    'Nigeria': 0.64,
+    'Sweden': 0.63,
+    'Denmark': 0.68,
+    'Austria': 0.61,
+    'Czech Republic': 0.60
+}
 
-# Učitaj konfiguraciju turnira
-AVAILABLE_TOURNAMENTS = list(Config.COMPETITIONS.keys())
+def get_strength(team):
+    """Vraća jačinu tima (default 0.65)"""
+    return TEAM_STRENGTH.get(team, 0.65)
 
-@app.route('/api/tournaments', methods=['GET'])
-def get_tournaments():
-    """Vraća listu dostupnih turnira"""
-    return jsonify({
-        'tournaments': AVAILABLE_TOURNAMENTS,
-        'competitions': Config.COMPETITIONS
-    })
+# ============================================
+# ENDPOINT 1: Lista timova
+# ============================================
+@app.route('/api/teams', methods=['GET'])
+def get_teams():
+    """Vraća listu svih timova"""
+    return jsonify({'teams': TEAMS})
 
-@app.route('/api/load-tournament', methods=['POST'])
-def load_tournament():
-    """Učitava specifičan turnir"""
-    data = request.json
-    tournament_name = data.get('tournament_name')
-    season = data.get('season', '2026')
-    
-    if tournament_name not in AVAILABLE_TOURNAMENTS:
-        return jsonify({'error': 'Turnir nije pronađen'}), 404
-    
-    # Učitaj podatke za turnir (skraćeno za demo)
-    tournament_manager.register_tournament(tournament_name, {
-        'name': tournament_name,
-        'season': season,
-        'teams': Config.COMPETITIONS[tournament_name].get('teams', 32)
-    })
-    
-    return jsonify({
-        'message': f'Turnir {tournament_name} {season} učitan',
-        'tournament': tournament_name,
-        'season': season
-    })
-
+# ============================================
+# ENDPOINT 2: Predikcija utakmice
+# ============================================
 @app.route('/api/predict', methods=['POST'])
 def predict():
-    """Predviđa ishod utakmice (sada ensemble modelom)"""
+    """Predviđa ishod utakmice na osnovu jačine timova i domaćeg terena"""
+    
     data = request.json
     team1 = data.get('team1')
     team2 = data.get('team2')
-    tournament = data.get('tournament', 'World Cup')
+    venue = data.get('venue', 'neutral')
     
-    # Kreiraj feature-ove (za demo koristi mock podatke)
-    mock_data = pd.DataFrame({
-        'team1': [team1],
-        'team2': [team2],
-        'venue': ['neutral'],
-        'result': ['D']  # dummy
-    })
+    # Validacija
+    if not team1 or not team2:
+        return jsonify({'error': 'Nedostaju timovi'}), 400
     
-    X, _ = engineer.create_all_features(mock_data)
+    if team1 == team2:
+        return jsonify({'error': 'Timovi moraju biti različiti'}), 400
     
-    # Predikcija ensemble modelom
-    probas = predictor.predict_proba(X)[0]
+    # Dohvati jačinu timova
+    strength1 = get_strength(team1)
+    strength2 = get_strength(team2)
     
-    # Mapiramo klase: 0 = gost pobedio, 1 = nerešeno, 2 = domaćin pobedio
-    home_win_prob = probas[2] if len(probas) > 2 else probas[1]
-    draw_prob = probas[1] if len(probas) > 2 else probas[0]
-    away_win_prob = probas[0] if len(probas) > 2 else probas[0]
+    # Faktor domaćeg terena
+    home_factor = {
+        'home': 1.20,      # Domaćin ima 20% prednosti
+        'neutral': 1.00,   # Neutralan teren
+        'away': 0.85       # Gost ima 15% hendikepa
+    }.get(venue, 1.00)
     
-    if home_win_prob > draw_prob and home_win_prob > away_win_prob:
+    # Izračunaj verovatnoće
+    adjusted_strength1 = strength1 * home_factor
+    total = adjusted_strength1 + strength2
+    
+    home_win = (adjusted_strength1 / total) * 0.7 + 0.15
+    away_win = (strength2 / total) * 0.7 + 0.15
+    draw = 1 - home_win - away_win
+    
+    # Normalizacija (da zbir bude 100%)
+    total_prob = home_win + draw + away_win
+    home_win = home_win / total_prob
+    draw = draw / total_prob
+    away_win = away_win / total_prob
+    
+    # Odredi pobednika
+    if home_win > draw and home_win > away_win:
         winner = team1
-        confidence = home_win_prob
-    elif away_win_prob > home_win_prob and away_win_prob > draw_prob:
+        confidence = home_win
+    elif away_win > home_win and away_win > draw:
         winner = team2
-        confidence = away_win_prob
+        confidence = away_win
     else:
         winner = "Nerešeno"
-        confidence = draw_prob
+        confidence = draw
     
+    # Vrati rezultat
     return jsonify({
         'team1': team1,
         'team2': team2,
-        'tournament': tournament,
         'winner': winner,
         'confidence': round(confidence * 100, 1),
         'probabilities': {
-            f'{team1}_win': round(home_win_prob * 100, 1),
-            'draw': round(draw_prob * 100, 1),
-            f'{team2}_win': round(away_win_prob * 100, 1)
+            f'{team1}_win': round(home_win * 100, 1),
+            'draw': round(draw * 100, 1),
+            f'{team2}_win': round(away_win * 100, 1)
         },
-        'model_used': 'ensemble (XGBoost+RF+NeuralNet)'
+        'venue': venue,
+        'model_used': 'Strength-based simulation'
     })
 
-@app.route('/api/feature-importance', methods=['GET'])
-def feature_importance():
-    """Vraća važnost feature-a za XGBoost model"""
-    if predictor.xgb_model is not None:
-        importance = predictor.xgb_model.feature_importances_
-        features = engineer.feature_names
-        
-        sorted_idx = np.argsort(importance)[::-1][:20]
-        
-        return jsonify({
-            'features': [features[i] for i in sorted_idx],
-            'importance': [float(importance[i]) for i in sorted_idx]
-        })
-    
-    return jsonify({'error': 'Model nije učitan'}), 404
-
-@app.route('/api/hyperparameters', methods=['GET'])
-def get_hyperparameters():
-    """Vraća korišćene hyperparametre za modele"""
+# ============================================
+# ENDPOINT 3: Health check
+# ============================================
+@app.route('/api/health', methods=['GET'])
+def health():
+    """Provera statusa servera"""
     return jsonify({
-        'xgboost': predictor.xgb_model.get_params() if predictor.xgb_model else None,
-        'random_forest': predictor.rf_model.get_params() if predictor.rf_model else None,
-        'config': {
-            'xgboost_grid': Config.XGBOOST_GRID,
-            'rf_grid': Config.RF_GRID,
-            'cv_folds': Config.CV_FOLDS
-        }
+        'status': 'ok',
+        'teams_count': len(TEAMS),
+        'message': 'World Cup 2026 Prediction API is running'
     })
 
+# ============================================
+# POKRETANJE SERVERA
+# ============================================
 if __name__ == '__main__':
-    print("🏆 UNIVERZALNI FUTBAL PREDIKCIONI SISTEM")
-    print("🚀 Server running on http://localhost:5000")
-    print(f"📊 Dostupni turniri: {', '.join(AVAILABLE_TOURNAMENTS)}")
-    print("⚡ Ensemble model: XGBoost + Random Forest + Neural Network")
+    print("=" * 50)
+    print("🏆 WORLD CUP 2026 PREDICTION API")
+    print("=" * 50)
+    print(f"🚀 Server running on http://localhost:5000")
+    print(f"📊 {len(TEAMS)} timova učitano")
+    print(f"⚡ Model: Strength-based simulation")
+    print("=" * 50)
+    print("\nDostupni endpointi:")
+    print("  GET  /api/teams     - Lista timova")
+    print("  POST /api/predict   - Predikcija utakmice")
+    print("  GET  /api/health    - Health check")
+    print("\n" + "=" * 50)
+    
     app.run(debug=True, port=5000)
