@@ -1,0 +1,13 @@
+date,team,opponent,venue,goals_for,goals_against,result
+2024-06-01,Brazil,Argentina,home,2,1,W
+2024-06-05,Brazil,Germany,neutral,1,1,D
+2024-06-10,Brazil,France,away,0,2,L
+2024-06-15,Argentina,Brazil,away,1,2,L
+2024-06-20,Argentina,Germany,neutral,2,1,W
+2024-06-25,Argentina,France,home,1,1,D
+2024-07-01,France,Brazil,home,2,0,W
+2024-07-05,France,Argentina,away,1,1,D
+2024-07-10,France,Germany,neutral,0,0,D
+2024-07-15,Germany,Brazil,home,3,1,W
+2024-07-20,Germany,Argentina,away,1,0,W
+2024-07-25,Germany,France,home,2,1,W
