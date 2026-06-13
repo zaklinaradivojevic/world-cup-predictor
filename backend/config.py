@@ -57,3 +57,28 @@ class Config:
         'min_samples_leaf': [1, 2, 4],
         'max_features': ['sqrt', 'log2']
     }
+        # ============ DODATO: Mock data flag ============
+    USE_MOCK_DATA = os.getenv('USE_MOCK_DATA', 'true').lower() == 'true'
+    
+    # OpenWeatherMap API
+    OPENWEATHER_API_KEY = os.getenv('OPENWEATHER_API_KEY', '')
+    
+    @classmethod
+    def is_api_available(cls, api_name: str) -> bool:
+        """Proverava da li je API ključ dostupan"""
+        keys = {
+            'sportmonks': cls.SPORTMONKS_TOKEN,
+            'football_data': cls.FOOTBALL_DATA_API_KEY,
+            'openweather': cls.OPENWEATHER_API_KEY
+        }
+        return bool(keys.get(api_name, ''))
+    
+    @classmethod
+    def get_api_status(cls) -> dict:
+        """Vraća status svih API-jeva"""
+        return {
+            'sportmonks': bool(cls.SPORTMONKS_TOKEN),
+            'football_data': bool(cls.FOOTBALL_DATA_API_KEY),
+            'openweather': bool(cls.OPENWEATHER_API_KEY),
+            'use_mock_data': cls.USE_MOCK_DATA
+        }

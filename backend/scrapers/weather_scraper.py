@@ -1,6 +1,8 @@
-"""
+ """
 Weather Scraper - prikuplja vremenske podatke za utakmice
-Koristi OpenWeatherMap API (besplatni API ključ potreban)
+Podržava:
+- Open-Meteo (primarni - ne zahteva API ključ)
+- OpenWeatherMap (fallback - zahteva API ključ)
 """
 
 import requests
@@ -8,6 +10,7 @@ from datetime import datetime
 from typing import Dict, Optional
 import json
 import os
+import random
 
 class WeatherScraper:
     def __init__(self, api_key: Optional[str] = None):
@@ -15,24 +18,83 @@ class WeatherScraper:
         Inicijalizacija weather scraper-a
         
         Args:
-            api_key: OpenWeatherMap API ključ (može se dobiti besplatno na openweathermap.org)
+            api_key: Opcioni OpenWeatherMap API ključ (nije obavezan)
         """
         self.api_key = api_key or os.getenv('OPENWEATHER_API_KEY', '')
-        self.base_url = "https://api.openweathermap.org/data/2.5"
+        self.openweather_url = "https://api.openweathermap.org/data/2.5"
+        self.openmeteo_url = "https://api.open-meteo.com/v1/forecast"
+        self.geocoding_url = "https://geocoding-api.open-meteo.com/v1/search"
         
-    def get_weather_for_match(self, city: str, date: str) -> Dict:
-        """
-        Dohvata vremensku prognozu za grad i datum
-        
-        Args:
-            city: Ime grada (npr. "Mexico City", "Doha")
-            date: Datum u formatu "YYYY-MM-DD"
+    def _get_coordinates_openmeteo(self, city: str) -> Optional[tuple]:
+        """Dohvata koordinate grada koristeći Open-Meteo geocoding (besplatno, bez API ključa)"""
+        try:
+            params = {'name': city, 'count': 1, 'language': 'en', 'format': 'json'}
+            response = requests.get(self.geocoding_url, params=params, timeout=10)
             
-        Returns:
-            Dict sa vremenskim podacima
-        """
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('results'):
+                    result = data['results'][0]
+                    return (result['latitude'], result['longitude'], result.get('country', ''))
+            return None
+        except Exception as e:
+            print(f"⚠️ Geocoding greška za {city}: {e}")
+            return None
+    
+    def get_weather_openmeteo(self, lat: float, lon: float, date: str) -> Dict:
+        """Dohvata vremensku prognozu koristeći Open-Meteo (bez API ključa)"""
+        try:
+            params = {
+                "latitude": lat,
+                "longitude": lon,
+                "daily": "temperature_2m_max,temperature_2m_min,precipitation_probability_mean",
+                "current": "temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m",
+                "timezone": "auto"
+            }
+            
+            response = requests.get(self.openmeteo_url, params=params, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Open-Meteo vraća podatke za 7 dana, tražimo najbliži datumu
+                target_date = datetime.strptime(date, "%Y-%m-%d").date()
+                
+                if 'daily' in data and 'time' in data['daily']:
+                    for i, forecast_date in enumerate(data['daily']['time']):
+                        if forecast_date == date:
+                            return {
+                                'temperature': data['daily']['temperature_2m_max'][i],
+                                'feels_like': data['daily']['temperature_2m_max'][i] - 2,
+                                'humidity': 60,  # Open-Meteo nema humidity u daily, koristi default
+                                'wind_speed': 10,  # Može se dodati wind_speed_10m_max
+                                'rain_probability': data['daily']['precipitation_probability_mean'][i],
+                                'conditions': 'rainy' if data['daily']['precipitation_probability_mean'][i] > 50 else 'cloudy',
+                                'source': 'open-meteo'
+                            }
+                
+                # Ako nema daily, koristi current
+                if 'current' in data:
+                    return {
+                        'temperature': data['current']['temperature_2m'],
+                        'feels_like': data['current']['temperature_2m'] - 2,
+                        'humidity': data['current'].get('relative_humidity_2m', 60),
+                        'wind_speed': data['current'].get('wind_speed_10m', 10),
+                        'rain_probability': 20,
+                        'conditions': 'clear',
+                        'source': 'open-meteo'
+                    }
+            
+            return None
+            
+        except Exception as e:
+            print(f"⚠️ Open-Meteo greška: {e}")
+            return None
+    
+    def get_weather_openweather(self, city: str, date: str) -> Dict:
+        """Dohvata vremensku prognozu koristeći OpenWeatherMap (zahteva API ključ)"""
         if not self.api_key:
-            return self._get_mock_weather(city)
+            return None
         
         try:
             # Prvo dohvati koordinate grada
@@ -43,16 +105,16 @@ class WeatherScraper:
                 'appid': self.api_key
             }
             
-            geo_response = requests.get(geo_url, params=params)
+            geo_response = requests.get(geo_url, params=params, timeout=10)
             geo_data = geo_response.json()
             
             if not geo_data:
-                return self._get_mock_weather(city)
+                return None
             
             lat, lon = geo_data[0]['lat'], geo_data[0]['lon']
             
-            # Dohvati prognozu za koordinate
-            weather_url = f"{self.base_url}/forecast"
+            # Dohvati prognozu
+            weather_url = f"{self.openweather_url}/forecast"
             params = {
                 'lat': lat,
                 'lon': lon,
@@ -60,10 +122,9 @@ class WeatherScraper:
                 'units': 'metric'
             }
             
-            response = requests.get(weather_url, params=params)
+            response = requests.get(weather_url, params=params, timeout=10)
             data = response.json()
             
-            # Pronađi prognozu za traženi datum
             target_date = datetime.strptime(date, "%Y-%m-%d").date()
             
             for forecast in data.get('list', []):
@@ -76,18 +137,51 @@ class WeatherScraper:
                         'wind_speed': forecast['wind']['speed'],
                         'rain_probability': forecast.get('pop', 0) * 100,
                         'conditions': forecast['weather'][0]['description'],
-                        'icon': forecast['weather'][0]['icon']
+                        'source': 'openweathermap'
                     }
             
-            return self._get_mock_weather(city)
+            return None
             
         except Exception as e:
-            print(f"Greška pri dohvatanju vremena za {city}: {e}")
-            return self._get_mock_weather(city)
+            print(f"⚠️ OpenWeatherMap greška za {city}: {e}")
+            return None
+    
+    def get_weather_for_match(self, city: str, date: str) -> Dict:
+        """
+        Dohvata vremensku prognozu za grad i datum
+        Pokušava redom: Open-Meteo → OpenWeatherMap → Mock
+        
+        Args:
+            city: Ime grada (npr. "Mexico City", "Doha")
+            date: Datum u formatu "YYYY-MM-DD"
+            
+        Returns:
+            Dict sa vremenskim podacima
+        """
+        print(f"🌤️ Dohvatam vreme za {city}, {date}...")
+        
+        # 1. Pokušaj Open-Meteo (bez API ključa)
+        coords = self._get_coordinates_openmeteo(city)
+        if coords:
+            lat, lon, country = coords
+            weather = self.get_weather_openmeteo(lat, lon, date)
+            if weather:
+                print(f"   ✅ Vreme dohvaćeno preko Open-Meteo")
+                return weather
+        
+        # 2. Pokušaj OpenWeatherMap (ako ima API ključ)
+        if self.api_key:
+            weather = self.get_weather_openweather(city, date)
+            if weather:
+                print(f"   ✅ Vreme dohvaćeno preko OpenWeatherMap")
+                return weather
+        
+        # 3. Fallback na mock podatke
+        print(f"   ⚠️ Koristim mock podatke za {city}")
+        return self._get_mock_weather(city)
     
     def _get_mock_weather(self, city: str) -> Dict:
-        """Generiše mock podatke za demo (kada nema API ključa)"""
-        import random
+        """Generiše mock podatke za demo (kada nema API-ja)"""
         
         # Tipični vremenski uslovi za različite gradove
         weather_patterns = {
@@ -96,11 +190,14 @@ class WeatherScraper:
             'Berlin': {'temp': 18, 'conditions': 'cloudy', 'rain': 30},
             'London': {'temp': 15, 'conditions': 'rainy', 'rain': 60},
             'Rio': {'temp': 28, 'conditions': 'sunny', 'rain': 20},
+            'Belgrade': {'temp': 20, 'conditions': 'sunny', 'rain': 15},
+            'Paris': {'temp': 17, 'conditions': 'cloudy', 'rain': 25},
+            'Madrid': {'temp': 25, 'conditions': 'sunny', 'rain': 10},
+            'Munich': {'temp': 16, 'conditions': 'rainy', 'rain': 40},
         }
         
         pattern = weather_patterns.get(city, {'temp': 20, 'conditions': 'clear', 'rain': 15})
         
-        # Dodaj malo random varijacija
         return {
             'temperature': pattern['temp'] + random.uniform(-5, 5),
             'feels_like': pattern['temp'] + random.uniform(-3, 3),
@@ -109,7 +206,7 @@ class WeatherScraper:
             'rain_probability': pattern['rain'] + random.uniform(-10, 20),
             'conditions': pattern['conditions'],
             'icon': '01d' if pattern['conditions'] == 'sunny' else '03d',
-            'source': 'mock'  # Oznaka da su mock podaci
+            'source': 'mock'
         }
     
     def get_weather_factors(self, weather_data: Dict) -> Dict:
@@ -140,17 +237,28 @@ class WeatherScraper:
             'rain_factor': round(rain_factor, 2),
             'wind_factor': round(wind_factor, 2),
             'fatigue_factor': round(fatigue_factor, 2),
-            'advantage_attacking': round(1 - rain_factor, 2),  # Suvo = bolje za napad
-            'advantage_defending': round(1 - wind_factor, 2)   # Manje vetra = bolje za odbranu
+            'advantage_attacking': round(1 - rain_factor, 2),
+            'advantage_defending': round(1 - wind_factor, 2),
+            'source': weather_data.get('source', 'unknown')
         }
 
-# Primer korišćenja
+
+# Testiranje
 if __name__ == "__main__":
-    scraper = WeatherScraper()  # Bez API ključa - koristi mock
+    print("="*50)
+    print("🌤️ TESTIRANJE WEATHER SCRAPER-a")
+    print("="*50)
     
-    # Test za Mexico City 11. juna 2026.
+    scraper = WeatherScraper()  # Bez API ključa - koristi Open-Meteo
+    
+    # Test za Mexico City
     weather = scraper.get_weather_for_match("Mexico City", "2026-06-11")
-    print(f"Vreme u Mexico City-ju: {weather}")
+    print(f"\n📊 Vreme u Mexico City-ju:")
+    print(f"   Temperatura: {weather.get('temperature', '?')}°C")
+    print(f"   Kiša: {weather.get('rain_probability', '?')}%")
+    print(f"   Izvor: {weather.get('source', '?')}")
     
     factors = scraper.get_weather_factors(weather)
-    print(f"\nFaktori za ML model: {factors}")
+    print(f"\n📈 Faktori za ML model:")
+    for key, value in factors.items():
+        print(f"   {key}: {value}")

@@ -1,0 +1,9 @@
+.env
+.env.local
+.env.*.local
+
+# API keys
+*_key*
+*_token*
+*.pem
+*.key
