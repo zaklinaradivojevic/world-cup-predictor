@@ -1,4 +1,4 @@
-// Live predikcije JavaScript - sa stvarnim rezultatima
+// Live predikcije JavaScript - sa STVARNIM rezultatima sa API-ja
 
 const API_URL = 'http://localhost:5000/api';
 
@@ -13,22 +13,7 @@ const loadingOverlay = document.getElementById('loadingOverlay');
 let currentTheme = localStorage.getItem('theme') || 'light';
 let selectedDate = 'today';
 let autoRefreshInterval = null;
-
-// Datumi utakmica SP 2026 sa REZULTATIMA
-const MATCH_SCHEDULE = [
-    { date: "2026-06-11", team1: "Mexico", team2: "South Africa", venue: "neutral", time: "18:00", group: "A", finished: true, result: "2-1", winner: "Mexico", home_goals: 2, away_goals: 1 },
-    { date: "2026-06-11", team1: "Germany", team2: "New Zealand", venue: "neutral", time: "21:00", group: "A", finished: true, result: "3-0", winner: "Germany", home_goals: 3, away_goals: 0 },
-    { date: "2026-06-12", team1: "Brazil", team2: "Portugal", venue: "neutral", time: "18:00", group: "B", finished: true, result: "2-0", winner: "Brazil", home_goals: 2, away_goals: 0 },
-    { date: "2026-06-12", team1: "USA", team2: "Saudi Arabia", venue: "neutral", time: "21:00", group: "B", finished: true, result: "1-1", winner: null, home_goals: 1, away_goals: 1 },
-    { date: "2026-06-13", team1: "France", team2: "Denmark", venue: "neutral", time: "18:00", group: "C", finished: false, live: false, result: null, winner: null },
-    { date: "2026-06-13", team1: "Japan", team2: "Ecuador", venue: "neutral", time: "21:00", group: "C", finished: false, live: false, result: null, winner: null },
-    { date: "2026-06-14", team1: "Argentina", team2: "Croatia", venue: "neutral", time: "18:00", group: "D", finished: false, live: false, result: null, winner: null },
-    { date: "2026-06-14", team1: "Australia", team2: "Canada", venue: "neutral", time: "21:00", group: "D", finished: false, live: false, result: null, winner: null },
-    { date: "2026-06-15", team1: "Spain", team2: "Netherlands", venue: "neutral", time: "18:00", group: "E", finished: false, live: false, result: null, winner: null },
-    { date: "2026-06-15", team1: "Morocco", team2: "Costa Rica", venue: "neutral", time: "21:00", group: "E", finished: false, live: false, result: null, winner: null },
-    { date: "2026-06-16", team1: "England", team2: "Belgium", venue: "neutral", time: "18:00", group: "F", finished: false, live: false, result: null, winner: null },
-    { date: "2026-06-16", team1: "Senegal", team2: "Iran", venue: "neutral", time: "21:00", group: "F", finished: false, live: false, result: null, winner: null }
-];
+let liveMatches = []; // Keš za utakmice sa API-ja
 
 // Tema
 function loadTheme() {
@@ -73,7 +58,7 @@ function filterMatchesByDate(matches) {
     return matches;
 }
 
-// Simulacija predikcije (dok API ne radi)
+// Dohvatanje predikcije za utakmicu
 async function getPredictionForMatch(team1, team2, venue) {
     try {
         const response = await fetch(`${API_URL}/predict`, {
@@ -86,6 +71,7 @@ async function getPredictionForMatch(team1, team2, venue) {
         console.log('API nije dostupan, koristim simulaciju');
     }
     
+    // Fallback simulacija ako API ne radi
     return {
         winner: Math.random() > 0.5 ? team1 : team2,
         confidence: Math.floor(Math.random() * 30) + 50,
@@ -97,31 +83,45 @@ async function getPredictionForMatch(team1, team2, venue) {
     };
 }
 
-// Određivanje statusa utakmice
-function getMatchStatus(match) {
-    if (match.finished) {
-        return { 
-            status: 'finished', 
-            text: '✅ Završeno', 
-            color: '#10b981', 
-            score: match.result,
-            home_goals: match.home_goals,
-            away_goals: match.away_goals,
-            winner: match.winner
-        };
+// Dohvatanje utakmica sa backend API-ja
+async function fetchMatchesFromAPI() {
+    try {
+        const response = await fetch(`${API_URL}/live-matches`);
+        const data = await response.json();
+        
+        if (data.matches && data.matches.length > 0) {
+            console.log(`✅ Dohvaćeno ${data.matches.length} utakmica sa API-ja (izvor: ${data.source})`);
+            return data.matches;
+        } else {
+            console.log('⚠️ API nije vratio utakmice, koristim prazan niz');
+            return [];
+        }
+    } catch (error) {
+        console.error('❌ Greška pri dohvatanju sa API-ja:', error);
+        return [];
     }
-    if (match.live) {
-        return { 
-            status: 'live', 
-            text: '🔴 UŽIVO', 
-            color: '#ef4444', 
-            score: match.score, 
-            minute: match.minute,
-            home_goals: match.home_goals,
-            away_goals: match.away_goals
-        };
-    }
-    return { status: 'upcoming', text: '📅 Ususret', color: '#f59e0b', score: null };
+}
+
+// Određivanje statusa i rezultata utakmice iz API podataka
+function processMatchFromAPI(apiMatch) {
+    const isFinished = apiMatch.status === 'finished';
+    const isLive = apiMatch.status === 'live';
+    const hasScore = apiMatch.home_goals !== undefined && apiMatch.away_goals !== undefined;
+    
+    return {
+        date: apiMatch.date,
+        team1: apiMatch.team1,
+        team2: apiMatch.team2,
+        time: apiMatch.time || '--:--',
+        group: apiMatch.group || '?',
+        finished: isFinished,
+        live: isLive,
+        result: hasScore ? `${apiMatch.home_goals}-${apiMatch.away_goals}` : null,
+        winner: apiMatch.winner,
+        home_goals: apiMatch.home_goals,
+        away_goals: apiMatch.away_goals,
+        score: hasScore ? `${apiMatch.home_goals}-${apiMatch.away_goals}` : null
+    };
 }
 
 // Prikazivanje utakmica
@@ -139,46 +139,47 @@ async function displayMatches(matches, silent = false) {
     matchesGrid.innerHTML = '';
     
     for (const match of filteredMatches) {
-        const prediction = await getPredictionForMatch(match.team1, match.team2, match.venue);
-        const matchStatus = getMatchStatus(match);
+        // Dohvati predikciju za ovu utakmicu
+        const prediction = await getPredictionForMatch(match.team1, match.team2, 'neutral');
         
         const matchCard = document.createElement('div');
-        matchCard.className = `match-card ${matchStatus.status === 'live' ? 'live' : ''}`;
+        const isLiveClass = match.live ? 'live' : '';
+        matchCard.className = `match-card ${isLiveClass}`;
         
-        // Prikaz rezultata ako je utakmica završena
+        // Prikaz rezultata
         let scoreDisplay = '';
-        if (matchStatus.status === 'finished' && matchStatus.score) {
+        if (match.finished && match.score) {
+            // Završena utakmica - prikazujemo stvarni rezultat
             scoreDisplay = `
                 <div class="teams">
                     <div class="team">
                         <div class="team-name">${match.team1}</div>
-                        <div class="team-score" style="font-size: 2rem;">${matchStatus.home_goals}</div>
+                        <div class="team-score" style="font-size: 2rem;">${match.home_goals}</div>
                     </div>
                     <div class="vs">VS</div>
                     <div class="team">
                         <div class="team-name">${match.team2}</div>
-                        <div class="team-score" style="font-size: 2rem;">${matchStatus.away_goals}</div>
+                        <div class="team-score" style="font-size: 2rem;">${match.away_goals}</div>
                     </div>
                 </div>
             `;
-        } else if (matchStatus.status === 'live' && matchStatus.score) {
+        } else if (match.live && match.score) {
+            // Utakmica u toku
             scoreDisplay = `
                 <div class="teams">
                     <div class="team">
                         <div class="team-name">${match.team1}</div>
-                        <div class="team-score" style="font-size: 2rem;">${matchStatus.home_goals || 0}</div>
+                        <div class="team-score" style="font-size: 2rem;">${match.home_goals || 0}</div>
                     </div>
                     <div class="vs">VS</div>
                     <div class="team">
                         <div class="team-name">${match.team2}</div>
-                        <div class="team-score" style="font-size: 2rem;">${matchStatus.away_goals || 0}</div>
+                        <div class="team-score" style="font-size: 2rem;">${match.away_goals || 0}</div>
                     </div>
                 </div>
             `;
-            if (matchStatus.minute) {
-                scoreDisplay += `<div style="text-align: center; font-size: 0.8rem;">${matchStatus.minute}' minut</div>`;
-            }
         } else {
+            // Utakmica koja još nije počela
             scoreDisplay = `
                 <div class="teams">
                     <div class="team">
@@ -194,10 +195,26 @@ async function displayMatches(matches, silent = false) {
             `;
         }
         
-        // Odrediti pobednika za prikaz
+        // Status utakmice
+        let statusText = '';
+        let statusColor = '';
+        if (match.finished) {
+            statusText = '✅ Završeno';
+            statusColor = '#10b981';
+        } else if (match.live) {
+            statusText = '🔴 UŽIVO';
+            statusColor = '#ef4444';
+        } else {
+            statusText = '📅 Ususret';
+            statusColor = '#f59e0b';
+        }
+        
+        // Tekst pobednika
         let winnerText = '';
-        if (matchStatus.status === 'finished' && matchStatus.winner) {
-            winnerText = `🏆 ${matchStatus.winner} (utakmica završena)`;
+        if (match.finished && match.winner) {
+            winnerText = `🏆 ${match.winner} (utakmica završena)`;
+        } else if (match.finished && !match.winner && match.home_goals === match.away_goals) {
+            winnerText = `🏆 Nerešeno (utakmica završena)`;
         } else {
             winnerText = `${prediction.winner} (${prediction.confidence}% sigurnosti)`;
         }
@@ -209,8 +226,8 @@ async function displayMatches(matches, silent = false) {
             </div>
             <div class="match-body">
                 <div class="match-status">
-                    <span class="status-${matchStatus.status}" style="color: ${matchStatus.color}">
-                        ${matchStatus.text}
+                    <span style="color: ${statusColor}">
+                        ${statusText}
                     </span>
                 </div>
                 
@@ -263,16 +280,29 @@ async function displayMatches(matches, silent = false) {
     if (!silent) hideLoading();
 }
 
+// Glavna funkcija za učitavanje live utakmica
 async function loadLiveMatches(silent = false) {
     if (!silent) showLoading();
     
     try {
-        await displayMatches(MATCH_SCHEDULE, silent);
+        // Dohvati utakmice sa API-ja
+        const apiMatches = await fetchMatchesFromAPI();
+        
+        if (apiMatches.length > 0) {
+            // Konvertuj API podatke u format za prikaz
+            const processedMatches = apiMatches.map(match => processMatchFromAPI(match));
+            liveMatches = processedMatches;
+            await displayMatches(processedMatches, silent);
+        } else {
+            // Ako nema podataka sa API-ja, prikaži poruku
+            matchesGrid.innerHTML = `<div class="no-matches"><i class="fas fa-info-circle"></i><p>Trenutno nema dostupnih utakmica. Proverite API konekciju.</p></div>`;
+        }
+        
         updateTimestamp();
     } catch (error) {
-        console.error('Greška:', error);
+        console.error('Greška pri učitavanju:', error);
         if (!silent) {
-            matchesGrid.innerHTML = `<div class="no-matches"><i class="fas fa-exclamation-triangle"></i><p>Greška pri učitavanju utakmica</p></div>`;
+            matchesGrid.innerHTML = `<div class="no-matches"><i class="fas fa-exclamation-triangle"></i><p>Greška pri učitavanju utakmica sa API-ja</p><button onclick="location.reload()" style="margin-top: 1rem; padding: 0.5rem 1rem;">Pokušaj ponovo</button></div>`;
         }
     } finally {
         if (!silent) hideLoading();
@@ -290,13 +320,18 @@ function setupEventListeners() {
             dateBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             selectedDate = btn.dataset.date;
-            loadLiveMatches(false);
+            if (liveMatches.length > 0) {
+                displayMatches(liveMatches, true);
+            } else {
+                loadLiveMatches(false);
+            }
         });
     });
 }
 
 // Inicijalizacija
 function init() {
+    console.log('🚀 Live stranica inicijalizovana');
     loadTheme();
     setupEventListeners();
     loadLiveMatches(false);
