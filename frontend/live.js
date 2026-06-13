@@ -14,40 +14,20 @@ let currentTheme = localStorage.getItem('theme') || 'light';
 let selectedDate = 'today';
 let autoRefreshInterval = null;
 
-// Stvarni rezultati utakmica (kasnije će dolaziti sa API-ja)
-const LIVE_RESULTS = {
-    "Mexico vs South Africa": { 
-        status: "finished", 
-        score: "2-1", 
-        winner: "Mexico",
-        home_goals: 2,
-        away_goals: 1
-    },
-    "Brazil vs Portugal": { 
-        status: "live", 
-        score: "1-0", 
-        winner: null,
-        home_goals: 1,
-        away_goals: 0,
-        minute: 67
-    },
-    "France vs Denmark": { 
-        status: "upcoming", 
-        score: null, 
-        winner: null 
-    }
-};
-
-// Datumi utakmica SP 2026
+// Datumi utakmica SP 2026 sa REZULTATIMA
 const MATCH_SCHEDULE = [
-    { date: "2026-06-11", team1: "Mexico", team2: "South Africa", venue: "neutral", time: "18:00", group: "A", finished: true, result: "2-1", winner: "Mexico" },
-    { date: "2026-06-11", team1: "Germany", team2: "New Zealand", venue: "neutral", time: "21:00", group: "A", finished: true, result: "3-0", winner: "Germany" },
-    { date: "2026-06-12", team1: "Brazil", team2: "Portugal", venue: "neutral", time: "18:00", group: "B", finished: false, live: true, minute: 67, score: "1-0" },
-    { date: "2026-06-12", team1: "USA", team2: "Saudi Arabia", venue: "neutral", time: "21:00", group: "B", finished: false, live: false },
-    { date: "2026-06-13", team1: "France", team2: "Denmark", venue: "neutral", time: "18:00", group: "C", finished: false, live: false },
-    { date: "2026-06-13", team1: "Japan", team2: "Ecuador", venue: "neutral", time: "21:00", group: "C", finished: false, live: false },
-    { date: "2026-06-14", team1: "Argentina", team2: "Croatia", venue: "neutral", time: "18:00", group: "D", finished: false, live: false },
-    { date: "2026-06-14", team1: "Australia", team2: "Canada", venue: "neutral", time: "21:00", group: "D", finished: false, live: false }
+    { date: "2026-06-11", team1: "Mexico", team2: "South Africa", venue: "neutral", time: "18:00", group: "A", finished: true, result: "2-1", winner: "Mexico", home_goals: 2, away_goals: 1 },
+    { date: "2026-06-11", team1: "Germany", team2: "New Zealand", venue: "neutral", time: "21:00", group: "A", finished: true, result: "3-0", winner: "Germany", home_goals: 3, away_goals: 0 },
+    { date: "2026-06-12", team1: "Brazil", team2: "Portugal", venue: "neutral", time: "18:00", group: "B", finished: true, result: "2-0", winner: "Brazil", home_goals: 2, away_goals: 0 },
+    { date: "2026-06-12", team1: "USA", team2: "Saudi Arabia", venue: "neutral", time: "21:00", group: "B", finished: true, result: "1-1", winner: null, home_goals: 1, away_goals: 1 },
+    { date: "2026-06-13", team1: "France", team2: "Denmark", venue: "neutral", time: "18:00", group: "C", finished: false, live: false, result: null, winner: null },
+    { date: "2026-06-13", team1: "Japan", team2: "Ecuador", venue: "neutral", time: "21:00", group: "C", finished: false, live: false, result: null, winner: null },
+    { date: "2026-06-14", team1: "Argentina", team2: "Croatia", venue: "neutral", time: "18:00", group: "D", finished: false, live: false, result: null, winner: null },
+    { date: "2026-06-14", team1: "Australia", team2: "Canada", venue: "neutral", time: "21:00", group: "D", finished: false, live: false, result: null, winner: null },
+    { date: "2026-06-15", team1: "Spain", team2: "Netherlands", venue: "neutral", time: "18:00", group: "E", finished: false, live: false, result: null, winner: null },
+    { date: "2026-06-15", team1: "Morocco", team2: "Costa Rica", venue: "neutral", time: "21:00", group: "E", finished: false, live: false, result: null, winner: null },
+    { date: "2026-06-16", team1: "England", team2: "Belgium", venue: "neutral", time: "18:00", group: "F", finished: false, live: false, result: null, winner: null },
+    { date: "2026-06-16", team1: "Senegal", team2: "Iran", venue: "neutral", time: "21:00", group: "F", finished: false, live: false, result: null, winner: null }
 ];
 
 // Tema
@@ -83,6 +63,7 @@ function updateTimestamp() {
     lastUpdateSpan.textContent = `Zadnje ažuriranje: ${now.toLocaleTimeString()}`;
 }
 
+// Filtriranje po datumu
 function filterMatchesByDate(matches) {
     const today = new Date().toISOString().split('T')[0];
     const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
@@ -119,10 +100,26 @@ async function getPredictionForMatch(team1, team2, venue) {
 // Određivanje statusa utakmice
 function getMatchStatus(match) {
     if (match.finished) {
-        return { status: 'finished', text: '✅ Završeno', color: '#10b981', score: match.result };
+        return { 
+            status: 'finished', 
+            text: '✅ Završeno', 
+            color: '#10b981', 
+            score: match.result,
+            home_goals: match.home_goals,
+            away_goals: match.away_goals,
+            winner: match.winner
+        };
     }
     if (match.live) {
-        return { status: 'live', text: '🔴 UŽIVO', color: '#ef4444', score: match.score, minute: match.minute };
+        return { 
+            status: 'live', 
+            text: '🔴 UŽIVO', 
+            color: '#ef4444', 
+            score: match.score, 
+            minute: match.minute,
+            home_goals: match.home_goals,
+            away_goals: match.away_goals
+        };
     }
     return { status: 'upcoming', text: '📅 Ususret', color: '#f59e0b', score: null };
 }
@@ -148,20 +145,33 @@ async function displayMatches(matches, silent = false) {
         const matchCard = document.createElement('div');
         matchCard.className = `match-card ${matchStatus.status === 'live' ? 'live' : ''}`;
         
-        // Prikaži rezultat ako je utakmica završena ili uživo
+        // Prikaz rezultata ako je utakmica završena
         let scoreDisplay = '';
-        if (matchStatus.score) {
-            const [goals1, goals2] = matchStatus.score.split('-');
+        if (matchStatus.status === 'finished' && matchStatus.score) {
             scoreDisplay = `
                 <div class="teams">
                     <div class="team">
                         <div class="team-name">${match.team1}</div>
-                        <div class="team-score" style="font-size: 2rem;">${goals1}</div>
+                        <div class="team-score" style="font-size: 2rem;">${matchStatus.home_goals}</div>
                     </div>
                     <div class="vs">VS</div>
                     <div class="team">
                         <div class="team-name">${match.team2}</div>
-                        <div class="team-score" style="font-size: 2rem;">${goals2}</div>
+                        <div class="team-score" style="font-size: 2rem;">${matchStatus.away_goals}</div>
+                    </div>
+                </div>
+            `;
+        } else if (matchStatus.status === 'live' && matchStatus.score) {
+            scoreDisplay = `
+                <div class="teams">
+                    <div class="team">
+                        <div class="team-name">${match.team1}</div>
+                        <div class="team-score" style="font-size: 2rem;">${matchStatus.home_goals || 0}</div>
+                    </div>
+                    <div class="vs">VS</div>
+                    <div class="team">
+                        <div class="team-name">${match.team2}</div>
+                        <div class="team-score" style="font-size: 2rem;">${matchStatus.away_goals || 0}</div>
                     </div>
                 </div>
             `;
@@ -182,6 +192,14 @@ async function displayMatches(matches, silent = false) {
                     </div>
                 </div>
             `;
+        }
+        
+        // Odrediti pobednika za prikaz
+        let winnerText = '';
+        if (matchStatus.status === 'finished' && matchStatus.winner) {
+            winnerText = `🏆 ${matchStatus.winner} (utakmica završena)`;
+        } else {
+            winnerText = `${prediction.winner} (${prediction.confidence}% sigurnosti)`;
         }
         
         matchCard.innerHTML = `
@@ -225,8 +243,7 @@ async function displayMatches(matches, silent = false) {
                 <div class="prediction-box">
                     <div class="prediction-text">
                         🤖 AI predviđa: 
-                        <span class="prediction-winner">${matchStatus.winner ? '🏆 ' + matchStatus.winner : prediction.winner}</span>
-                        <span style="font-size: 0.8rem;"> (${matchStatus.winner ? 'utakmica završena' : prediction.confidence + '% sigurnosti'})</span>
+                        <span class="prediction-winner">${winnerText}</span>
                     </div>
                 </div>
             </div>
