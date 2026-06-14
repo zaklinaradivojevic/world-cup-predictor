@@ -1,15 +1,31 @@
 // Live predikcije - SA FILTRIRANJEM
 
-// TAČNI REZULTATI SP 2026
 const WORLD_CUP_MATCHES = [
+    // 11. jun
     { id: 1, team1: "Mexico", team2: "South Africa", date: "2026-06-11", time: "18:00", group: "A", finished: true, home_goals: 2, away_goals: 0, winner: "Mexico" },
     { id: 2, team1: "South Korea", team2: "Czech Republic", date: "2026-06-11", time: "21:00", group: "A", finished: true, home_goals: 2, away_goals: 1, winner: "South Korea" },
+    
+    // 12. jun
     { id: 3, team1: "Canada", team2: "Bosnia and Herzegovina", date: "2026-06-12", time: "21:00", group: "B", finished: true, home_goals: 1, away_goals: 1, winner: null },
     { id: 4, team1: "USA", team2: "Paraguay", date: "2026-06-12", time: "21:00", group: "B", finished: true, home_goals: 4, away_goals: 1, winner: "USA" },
-    { id: 5, team1: "Qatar", team2: "Switzerland", date: "2026-06-13", time: "15:00", group: "B", finished: false },
+    
+    // 13. jun
+    { id: 5, team1: "Qatar", team2: "Switzerland", date: "2026-06-13", time: "15:00", group: "B", finished: true, home_goals: 0, away_goals: 2, winner: "Switzerland" },
     { id: 6, team1: "Brazil", team2: "Morocco", date: "2026-06-13", time: "18:00", group: "C", finished: true, home_goals: 1, away_goals: 1, winner: null },
     { id: 7, team1: "Haiti", team2: "Scotland", date: "2026-06-13", time: "21:00", group: "C", finished: true, home_goals: 0, away_goals: 1, winner: "Scotland" },
-    { id: 8, team1: "Australia", team2: "Turkiye", date: "2026-06-14", time: "00:00", group: "D", finished: false }
+    
+    // 14. jun
+    { id: 8, team1: "Australia", team2: "Turkiye", date: "2026-06-14", time: "00:00", group: "D", finished: false },
+    { id: 9, team1: "England", team2: "Senegal", date: "2026-06-14", time: "15:00", group: "I", finished: false },
+    { id: 10, team1: "Croatia", team2: "Austria", date: "2026-06-14", time: "18:00", group: "J", finished: false },
+    { id: 11, team1: "Ghana", team2: "Norway", date: "2026-06-14", time: "21:00", group: "K", finished: false },
+    
+    
+        // 15. jun
+    { id: 12, team1: "Sweden", team2: "Tunisia", date: "2026-06-15", time: "02:00", group: "F", finished: false },
+    { id: 13, team1: "Spain", team2: "Cabo Verde", date: "2026-06-15", time: "16:00", group: "H", finished: false },
+    { id: 14, team1: "Belgium", team2: "Egypt", date: "2026-06-15", time: "19:00", group: "G", finished: false },
+    { id: 15, team1: "Saudi Arabia", team2: "Uruguay", date: "2026-06-15", time: "22:00", group: "H", finished: false }
 ];
 
 // Trenutno izabrani filter
