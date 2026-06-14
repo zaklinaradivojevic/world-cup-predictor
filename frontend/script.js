@@ -317,12 +317,14 @@ function setupEventListeners() {
 
 // ============ INICIJALIZACIJA ============
 
-function init() {
+
+
+async function init() {
     console.log('🚀 AI Football Predictor inicijalizovan');
     console.log('themeToggle:', themeToggle);
     console.log('infoBtn:', infoBtn);
     loadTheme();
-    await populateTeamSelects();
+    await populateTeamSelects();  // await radi jer je init async
     loadPredictionHistory();
     setupEventListeners();
 }

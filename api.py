@@ -325,6 +325,23 @@ def simulate_group_stage():
     
     return jsonify(groups)
 
+
+@app.route('/api/teams', methods=['GET'])
+def get_teams():
+    # Privremena lista dok API ne bude vraćao prave timove
+    all_teams = [
+        "Brazil", "Argentina", "France", "Germany", "Spain", "England",
+        "Netherlands", "Portugal", "Belgium", "Croatia", "Italy", "Uruguay",
+        "Mexico", "USA", "Japan", "Morocco", "Senegal", "Australia",
+        "South Africa", "South Korea", "Colombia", "Switzerland", "Poland",
+        "Chile", "Nigeria", "Sweden", "Denmark", "Austria", "Czech Republic",
+        "Canada", "Paraguay", "Qatar", "Haiti", "Scotland", "Turkiye",
+        "Ecuador", "Tunisia", "Saudi Arabia", "Egypt", "Iran", "Cabo Verde",
+        "Curacao", "New Zealand", "Uzbekistan", "Jordan", "Ghana", "Norway",
+        "Panama", "Algeria", "Ivory Coast"
+    ]
+    return jsonify({'teams': sorted(all_teams)})
+
 # ============================================
 # POKRETANJE
 # ============================================
