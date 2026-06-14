@@ -85,13 +85,52 @@ function showInfoModal() {
     modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
 }
 
-// ============ TIMOVI ============
 
-function populateTeamSelects() {
+
+// ============ TIMOVI - UČITAVANJE SA API-JA ============
+
+async function populateTeamSelects() {
     if (!team1Select || !team2Select) return;
-    const options = TEAMS.map(team => `<option value="${team}">${team}</option>`).join('');
+    
+    try {
+        const response = await fetch(`${API_URL}/teams`);
+        const data = await response.json();
+        const teams = data.teams || [];
+        
+        if (teams.length === 0) {
+            console.warn('Nema timova sa API-ja, koristim statičku listu');
+            useStaticTeams();
+            return;
+        }
+        
+        const options = teams.map(team => `<option value="${team}">${team}</option>`).join('');
+        team1Select.innerHTML = `<option value="">Izaberi domaćina</option>${options}`;
+        team2Select.innerHTML = `<option value="">Izaberi gosta</option>${options}`;
+        
+        console.log(`✅ Učitano ${teams.length} timova sa API-ja`);
+    } catch (error) {
+        console.error('Greška pri učitavanju timova:', error);
+        useStaticTeams();
+    }
+}
+
+function useStaticTeams() {
+    const staticTeams = [
+        "Brazil", "Argentina", "France", "Germany", "Spain", "England",
+        "Netherlands", "Portugal", "Belgium", "Croatia", "Italy", "Uruguay",
+        "Mexico", "USA", "Japan", "Morocco", "Senegal", "Australia",
+        "South Africa", "South Korea", "Colombia", "Switzerland", "Poland",
+        "Chile", "Nigeria", "Sweden", "Denmark", "Austria", "Czech Republic",
+        "Canada", "Paraguay", "Qatar", "Haiti", "Scotland", "Turkiye",
+        "Ecuador", "Tunisia", "Saudi Arabia", "Egypt", "Iran", "Cabo Verde",
+        "Curacao", "New Zealand", "Uzbekistan", "Jordan", "Ghana", "Norway",
+        "Panama", "Algeria", "Ivory Coast"
+    ];
+    
+    const options = staticTeams.map(team => `<option value="${team}">${team}</option>`).join('');
     team1Select.innerHTML = `<option value="">Izaberi domaćina</option>${options}`;
     team2Select.innerHTML = `<option value="">Izaberi gosta</option>${options}`;
+    console.log(`📋 Učitano ${staticTeams.length} statičkih timova`);
 }
 
 // ============ SIMULACIJA PREDIKCIJE ============
@@ -283,7 +322,7 @@ function init() {
     console.log('themeToggle:', themeToggle);
     console.log('infoBtn:', infoBtn);
     loadTheme();
-    populateTeamSelects();
+    await populateTeamSelects();
     loadPredictionHistory();
     setupEventListeners();
 }
