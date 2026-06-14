@@ -1,7 +1,7 @@
 // Glavni JavaScript fajl za index.html
 
 // API konfiguracija
-const API_URL = 'http://localhost:5000/api';
+const API_URL = 'https://world-cup-predictor-54j0.onrender.com/api';
 
 // DOM elementi
 const team1Select = document.getElementById('team1');
@@ -324,7 +324,7 @@ async function init() {
     console.log('themeToggle:', themeToggle);
     console.log('infoBtn:', infoBtn);
     loadTheme();
-    await populateTeamSelects();  // await radi jer je init async
+    await populateTeamSelects();  
     loadPredictionHistory();
     setupEventListeners();
 }
