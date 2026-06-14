@@ -1,4 +1,4 @@
-// Live predikcije - STATIČKA VERZIJA (radi na GitHub Pages)
+// Live predikcije - SA FILTRIRANJEM
 
 // TAČNI REZULTATI SP 2026
 const WORLD_CUP_MATCHES = [
@@ -7,28 +7,61 @@ const WORLD_CUP_MATCHES = [
     { id: 3, team1: "Canada", team2: "Bosnia and Herzegovina", date: "2026-06-12", time: "21:00", group: "B", finished: true, home_goals: 1, away_goals: 1, winner: null },
     { id: 4, team1: "USA", team2: "Paraguay", date: "2026-06-12", time: "21:00", group: "B", finished: true, home_goals: 4, away_goals: 1, winner: "USA" },
     { id: 5, team1: "Qatar", team2: "Switzerland", date: "2026-06-13", time: "15:00", group: "B", finished: false },
-    { id: 6, team1: "Brazil", team2: "Morocco", date: "2026-06-13", time: "18:00", group: "C", finished: false },
-    { id: 7, team1: "Haiti", team2: "Scotland", date: "2026-06-13", time: "21:00", group: "C", finished: false },
+    { id: 6, team1: "Brazil", team2: "Morocco", date: "2026-06-13", time: "18:00", group: "C", finished: true, home_goals: 1, away_goals: 1, winner: null },
+    { id: 7, team1: "Haiti", team2: "Scotland", date: "2026-06-13", time: "21:00", group: "C", finished: true, home_goals: 0, away_goals: 1, winner: "Scotland" },
     { id: 8, team1: "Australia", team2: "Turkiye", date: "2026-06-14", time: "00:00", group: "D", finished: false }
 ];
 
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 Live stranica učitana');
+// Trenutno izabrani filter
+let currentFilter = 'today';
+
+// Dohvatanje datuma
+function getTodayDate() {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+}
+
+function getTomorrowDate() {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().split('T')[0];
+}
+
+// Filtriranje utakmica
+function filterMatches() {
+    const today = getTodayDate();
+    const tomorrow = getTomorrowDate();
     
+    if (currentFilter === 'today') {
+        return WORLD_CUP_MATCHES.filter(m => m.date === today);
+    } else if (currentFilter === 'tomorrow') {
+        return WORLD_CUP_MATCHES.filter(m => m.date === tomorrow);
+    } else {
+        return WORLD_CUP_MATCHES;
+    }
+}
+
+// Prikaz utakmica
+function displayMatches() {
     const matchesGrid = document.getElementById('matchesGrid');
-    
     if (!matchesGrid) {
-        console.error('Element matchesGrid nije pronađen!');
+        console.error('matchesGrid nije pronađen!');
+        return;
+    }
+    
+    const filteredMatches = filterMatches();
+    
+    if (filteredMatches.length === 0) {
+        matchesGrid.innerHTML = `<div class="no-matches"><i class="fas fa-calendar-day"></i><p>Nema utakmica za izabrani datum</p></div>`;
         return;
     }
     
     matchesGrid.innerHTML = '';
     
-    for (const match of WORLD_CUP_MATCHES) {
+    for (const match of filteredMatches) {
         const statusText = match.finished ? '✅ Završeno' : '📅 Ususret';
         const statusColor = match.finished ? '#10b981' : '#f59e0b';
         
-        // Prikaz rezultata
         let scoreDisplay = '';
         if (match.finished) {
             scoreDisplay = `
@@ -60,7 +93,6 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
         }
         
-        // Odredi pobednika za prikaz
         let winnerText = '';
         if (match.finished && match.winner) {
             winnerText = `🏆 ${match.winner}`;
@@ -92,15 +124,31 @@ document.addEventListener('DOMContentLoaded', function() {
         matchesGrid.appendChild(card);
     }
     
-    // Ažuriraj timestamp
     const lastUpdateSpan = document.getElementById('lastUpdate');
     if (lastUpdateSpan) {
         const now = new Date();
         lastUpdateSpan.textContent = `Zadnje ažuriranje: ${now.toLocaleTimeString()}`;
     }
-});
+}
 
-// Tema (jednostavna)
+// Postavljanje event listenera za dugmad
+function setupFilters() {
+    const dateBtns = document.querySelectorAll('.date-btn');
+    console.log('Pronađeno dugmadi:', dateBtns.length);
+    
+    dateBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            console.log('Kliknuto dugme:', this.dataset.date);
+            
+            dateBtns.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            currentFilter = this.dataset.date;
+            displayMatches();
+        });
+    });
+}
+
+// Tema
 function loadTheme() {
     const savedTheme = localStorage.getItem('theme') || 'light';
     document.documentElement.setAttribute('data-theme', savedTheme);
@@ -117,15 +165,17 @@ function toggleTheme() {
     if (icon) icon.className = newTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
 }
 
-const themeToggle = document.getElementById('themeToggle');
-if (themeToggle) {
-    themeToggle.addEventListener('click', toggleTheme);
-}
-
-loadTheme();
-
-// Refresh dugme
-const refreshBtn = document.getElementById('refreshBtn');
-if (refreshBtn) {
-    refreshBtn.addEventListener('click', () => location.reload());
-}
+// Inicijalizacija
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Live stranica učitana');
+    displayMatches();
+    setupFilters();
+    
+    const themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
+    
+    const refreshBtn = document.getElementById('refreshBtn');
+    if (refreshBtn) refreshBtn.addEventListener('click', () => displayMatches());
+    
+    loadTheme();
+});
