@@ -19,7 +19,7 @@ import certifi
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 # ============================================
 # API KONFIGURACIJA
@@ -177,6 +177,18 @@ ALL_TEAMS = [
 # ============================================
 # ENDPOINTI
 # ============================================
+@app.route('/')
+def home():
+    return jsonify({
+        'message': '🏆 World Cup 2026 Prediction API is running!',
+        'status': 'online',
+        'endpoints': {
+            'teams': '/api/teams',
+            'predict': '/api/predict (POST)',
+            'live-matches': '/api/live-matches',
+            'health': '/api/health'
+        }
+    })
 
 @app.route('/api/teams', methods=['GET'])
 def get_teams():
